@@ -1,0 +1,140 @@
+.dashboardContainer {
+  width: 100%;
+  height: 100dvh;
+  background: linear-gradient(135deg, #ecf0f1 0%, #d5dbdb 100%);
+  padding: 12px;
+  overflow: hidden;
+}
+
+.contentGrid {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr) 320px;
+  grid-template-rows: auto 1fr;
+  gap: 12px;
+  max-width: 1520px;
+  margin: 0 auto;
+  align-items: start;
+  height: 100%;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  min-height: 0;
+  height: 100%;
+}
+
+.stagePanel {
+  grid-column: 2 / 4;
+  grid-row: 1;
+  min-height: 0;
+}
+
+.mainContent {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  grid-column: 2;
+  grid-row: 2;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.rightSidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  grid-column: 3;
+  grid-row: 2;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+@media (max-width: 1200px) {
+  .contentGrid {
+    grid-template-columns: 280px 1fr 280px;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 992px) {
+  .dashboardContainer {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .contentGrid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    height: auto;
+  }
+
+  .sidebar {
+    grid-column: 1;
+    grid-row: auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+  }
+
+  .stagePanel {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .mainContent {
+    grid-column: 1;
+    grid-row: auto;
+    height: auto;
+    overflow: visible;
+  }
+
+  .rightSidebar {
+    grid-column: 1;
+    grid-row: auto;
+    order: 3;
+    height: auto;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboardContainer {
+    padding: 8px;
+  }
+
+  .contentGrid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    grid-template-rows: auto;
+  }
+
+  .sidebar {
+    grid-column: 1;
+    grid-row: auto;
+    grid-template-columns: 1fr;
+  }
+
+  .stagePanel {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .mainContent {
+    grid-column: 1;
+    grid-row: auto;
+    order: 2;
+  }
+
+  .rightSidebar {
+    grid-column: 1;
+    grid-row: auto;
+    order: 3;
+  }
+}
