@@ -4,6 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:ui": "next dev",
+    "dev:backend": "python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000",
+    "dev:backend:reload": "python -m uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8000",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"

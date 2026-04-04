@@ -1,0 +1,135 @@
+.summaryCard {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 2px 10px rgba(30, 41, 59, 0.1);
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sectionTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+  background: linear-gradient(135deg, #436ea3 0%, #2e557f 100%);
+  margin: -14px -14px 12px -14px;
+  padding: 11px 14px;
+  border-radius: 12px 12px 0 0;
+}
+
+.emptyState {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+  text-align: center;
+  padding: 18px 0;
+}
+
+.summaryBody {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 4px;
+}
+
+.summaryItem {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+.label {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.value,
+.valueMono {
+  color: #1f2937;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.valueMono {
+  font-family: 'Courier New', monospace;
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+.issueBox,
+.policyList {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.issueBox {
+  color: #334155;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.policyList p {
+  margin: 0;
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.policyList p + p {
+  margin-top: 6px;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: #1f9b59;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.metricsButton {
+  margin-top: 12px;
+  border: none;
+  border-radius: 10px;
+  height: 40px;
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.metricsButton:hover {
+  background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+}
+
+@media (max-width: 992px) {
+  .summaryCard {
+    height: auto;
+  }
+
+  .summaryBody {
+    overflow: visible;
+    padding-right: 0;
+  }
+}

@@ -8,13 +8,13 @@
 
 .contentGrid {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr) 320px;
+  grid-template-columns: 260px minmax(720px, 1fr) 280px;
   grid-template-rows: auto 1fr;
   gap: 12px;
-  max-width: 1520px;
+  max-width: 1660px;
   margin: 0 auto;
-  align-items: start;
-  height: 100%;
+  align-items: stretch;
+  height: calc(100dvh - 24px);
 }
 
 .sidebar {
@@ -25,12 +25,15 @@
   grid-row: 1 / span 2;
   min-height: 0;
   height: 100%;
+  overflow: hidden;
 }
 
 .stagePanel {
   grid-column: 2 / 4;
   grid-row: 1;
   min-height: 0;
+  min-width: 0;
+  align-self: start;
 }
 
 .mainContent {
@@ -40,8 +43,15 @@
   grid-column: 2;
   grid-row: 2;
   min-height: 0;
+  min-width: 0;
   height: 100%;
   overflow: hidden;
+  align-items: stretch;
+}
+
+.mainContent > * {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .rightSidebar {
@@ -51,13 +61,20 @@
   grid-column: 3;
   grid-row: 2;
   min-height: 0;
+  min-width: 0;
   height: 100%;
   overflow: hidden;
 }
 
+@media (max-width: 1400px) {
+  .contentGrid {
+    grid-template-columns: 230px minmax(0, 1fr) 240px;
+  }
+}
+
 @media (max-width: 1200px) {
   .contentGrid {
-    grid-template-columns: 280px 1fr 280px;
+    grid-template-columns: 240px minmax(0, 1fr) 250px;
     gap: 10px;
   }
 }

@@ -1,73 +1,187 @@
-'use client';
+﻿'use client';
 
+import { useEffect, useMemo, useRef, useState } from 'react';
 import styles from './TicketDetail.module.css';
 
-export default function TicketDetail({ ticket }) {
+const CATEGORY_OPTIONS = [
+  { value: 'refund', label: 'Refund' },
+  { value: 'return', label: 'Return' },
+  { value: 'delivery', label: 'Delivery' },
+  { value: 'account', label: 'Account' },
+  { value: 'technical', label: 'Technical' },
+  { value: 'other', label: 'Other' },
+];
+
+export default function TicketDetail({
+  ticket,
+  environmentState,
+  busyAction,
+  errorMessage,
+  autoAgentMode,
+  onAutoAgentModeChange,
+  onRunAutoAgent,
+  onGenerateDraftReply,
+  onClassify,
+  onSendMessage,
+  onEscalate,
+  onClose,
+}) {
+  const [replyText, setReplyText] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState(CATEGORY_OPTIONS[0].value);
+  const conversationRef = useRef(null);
+
+  const conversationHistory = useMemo(() => {
+    if (environmentState?.conversation_history?.length) {
+      return environmentState.conversation_history;
+    }
+
+    if (!ticket) return [];
+
+    return [{ role: 'customer', message: ticket.issue }];
+  }, [environmentState, ticket]);
+
+  useEffect(() => {
+    if (!conversationRef.current) return;
+    conversationRef.current.scrollTop = conversationRef.current.scrollHeight;
+  }, [conversationHistory]);
+
   if (!ticket) {
     return (
       <div className={styles.emptyState}>
-        <p>Select a ticket to view details</p>
+        <p>Select a ticket to open the conversation.</p>
       </div>
     );
   }
 
+  const isBusy = Boolean(busyAction) || Boolean(environmentState?.done);
+
   return (
-    <div className={styles.detailContainer}>
-      <div className={styles.ticketInfoSection}>
-        <h2 className={styles.sectionTitle}>Customer Support Ticket</h2>
-        <div className={styles.infoGrid}>
-          <div className={styles.infoRow}>
-            <label>Ticket ID:</label>
-            <span className={styles.ticketId}>{ticket.id}</span>
-          </div>
-          <div className={styles.infoRow}>
-            <label>Category:</label>
-            <span>{ticket.category}</span>
-          </div>
-          <div className={styles.infoRow}>
-            <label>Customer:</label>
-            <span>{ticket.customer}</span>
-          </div>
-          <div className={styles.infoRow}>
-            <label>Issue:</label>
-            <span className={styles.issueText}>{ticket.issue}</span>
-          </div>
-          <div className={styles.infoRow}>
-            <label>Order #:</label>
-            <span>{ticket.orderId}</span>
-          </div>
-          <div className={styles.infoRow}>
-            <label>Product:</label>
-            <span>{ticket.product}</span>
-          </div>
-          <div className={styles.infoRow}>
-            <label>Order Date:</label>
-            <span>{ticket.orderDateText}</span>
-          </div>
-          <div className={styles.infoRow}>
-            <label>Status:</label>
-            <span className={styles.statusBadge}>{ticket.status}</span>
-          </div>
+    <section className={styles.chatCard}>
+      <div className={styles.chatHeader}>
+        <div>
+          <p className={styles.eyebrow}>Live Workspace</p>
+          <h2 className={styles.title}>Agent Conversation</h2>
+        </div>
+        <div className={styles.toggleRow}>
+          <label className={styles.toggleLabel}>
+            <input
+              type="checkbox"
+              checked={autoAgentMode}
+              onChange={(event) => onAutoAgentModeChange(event.target.checked)}
+            />
+            Auto Agent Mode
+          </label>
+          <button
+            className={styles.autoButton}
+            disabled={isBusy}
+            onClick={onRunAutoAgent}
+          >
+            Run Auto Agent
+          </button>
         </div>
       </div>
 
-      <div className={styles.conversationSection}>
-        <h2 className={styles.sectionTitle}>Agent Conversation</h2>
-        <div className={styles.conversationBox}>
-          <div className={`${styles.message} ${styles.agentMessage}`}>
-            <span className={styles.messageBadge}>Agent</span>
-            <p>How can I assist you today?</p>
-          </div>
-          <div className={`${styles.message} ${styles.customerMessage}`}>
-            <span className={styles.messageBadge}>Customer</span>
-            <p>{ticket.issue}</p>
-          </div>
+      <div className={styles.actionBar}>
+        <div className={styles.actionGroup}>
+          <select
+            className={styles.categorySelect}
+            value={selectedCategory}
+            onChange={(event) => setSelectedCategory(event.target.value)}
+            disabled={isBusy}
+          >
+            {CATEGORY_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <button
+            className={styles.primaryButton}
+            disabled={isBusy}
+            onClick={() => onClassify(selectedCategory)}
+          >
+            Classify
+          </button>
         </div>
+
+        <div className={styles.actionGroup}>
+          <button
+            className={styles.secondaryButton}
+            disabled={isBusy}
+            onClick={onEscalate}
+          >
+            Escalate
+          </button>
+          <button
+            className={styles.secondaryButton}
+            disabled={isBusy}
+            onClick={onClose}
+          >
+            Close Ticket
+          </button>
+        </div>
+      </div>
+
+      {!!environmentState?.info_messages?.length && (
+        <div className={styles.feedbackBox}>
+          {environmentState.info_messages.map((message) => (
+            <p key={message}>{message}</p>
+          ))}
+        </div>
+      )}
+
+      {!!errorMessage && <p className={styles.errorText}>{errorMessage}</p>}
+
+      <div ref={conversationRef} className={styles.conversationBox}>
+        {conversationHistory.map((entry, index) => {
+          const roleClass =
+            entry.role === 'agent'
+              ? styles.agentMessage
+              : entry.role === 'system'
+                ? styles.systemMessage
+                : styles.customerMessage;
+
+          return (
+            <div key={`${entry.role}-${index}`} className={`${styles.message} ${roleClass}`}>
+              <span className={styles.messageBadge}>{entry.role}</span>
+              <p>{entry.message}</p>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className={styles.inputPanel}>
         <textarea
           className={styles.replyInput}
-          placeholder="Type your reply here..."
+          placeholder={environmentState?.done ? 'Ticket closed.' : 'Type your reply to the customer...'}
+          value={replyText}
+          onChange={(event) => setReplyText(event.target.value)}
+          disabled={isBusy}
+          rows={2}
         />
+        <button
+          className={styles.draftButton}
+          disabled={isBusy}
+          onClick={async () => {
+            const draftMessage = await onGenerateDraftReply();
+            if (draftMessage) {
+              setReplyText(draftMessage);
+            }
+          }}
+        >
+          {busyAction === 'draft-reply' ? 'Generating...' : 'Generate'}
+        </button>
+        <button
+          className={styles.sendButton}
+          disabled={isBusy || !replyText.trim()}
+          onClick={() => {
+            onSendMessage(replyText.trim());
+            setReplyText('');
+          }}
+        >
+          Send
+        </button>
       </div>
-    </div>
+    </section>
   );
 }

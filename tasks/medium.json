@@ -1,0 +1,224 @@
+{
+  "metadata": {
+    "difficulty": "medium",
+    "total_count": 5,
+    "version": "1.0"
+  },
+  "tasks": [
+    {
+      "ticket_id": "M-2001",
+      "display_category": "Refund Request",
+      "expected_category": "refund",
+      "expected_flow": [
+        "classify_ticket",
+        "respond",
+        "close_ticket"
+      ],
+      "max_steps": 6,
+      "policy_rules": [
+        "Opened electronics may be refunded within 7 days if they are defective.",
+        "Agents should confirm the defect symptoms and set a 3 to 5 business day refund timeline."
+      ],
+      "reply_guidance": {
+        "positive_keywords": [
+          "sorry",
+          "defective",
+          "3 to 5 business days"
+        ],
+        "negative_keywords": [
+          "cannot",
+          "exchange only"
+        ]
+      },
+      "resolution": {
+        "needs_escalation": false,
+        "can_close_after_response": true
+      },
+      "customer_simulation": {
+        "after_good_response": "That timeline helps. Please move forward with the refund.",
+        "after_bad_response": "I still need to know whether the defect qualifies.",
+        "after_failed_close": "You closed this before confirming the refund steps."
+      },
+      "ticket": {
+        "id": "TKT-M-2001",
+        "customer": "Jordan Lee",
+        "issue": "My tablet keeps shutting down after ten minutes and I need a refund if it is defective.",
+        "order_id": "ORD-20001",
+        "product": "10-inch Tablet",
+        "order_date_text": "6 days ago"
+      }
+    },
+    {
+      "ticket_id": "M-2002",
+      "display_category": "Return Request",
+      "expected_category": "return",
+      "expected_flow": [
+        "classify_ticket",
+        "respond",
+        "close_ticket"
+      ],
+      "max_steps": 6,
+      "policy_rules": [
+        "Furniture returns require all original hardware within 30 days.",
+        "Agents should explain pickup scheduling for bulky items."
+      ],
+      "reply_guidance": {
+        "positive_keywords": [
+          "pickup",
+          "hardware",
+          "30 days"
+        ],
+        "negative_keywords": [
+          "ship it yourself",
+          "cannot"
+        ]
+      },
+      "resolution": {
+        "needs_escalation": false,
+        "can_close_after_response": true
+      },
+      "customer_simulation": {
+        "after_good_response": "Pickup scheduling is exactly what I needed.",
+        "after_bad_response": "You did not explain how the furniture return pickup works.",
+        "after_failed_close": "Please keep this open until the pickup details are clear."
+      },
+      "ticket": {
+        "id": "TKT-M-2002",
+        "customer": "Sophia Martinez",
+        "issue": "I need to return a desk but I want to know how the pickup works for bulky items.",
+        "order_id": "ORD-20002",
+        "product": "Writing Desk",
+        "order_date_text": "8 days ago"
+      }
+    },
+    {
+      "ticket_id": "M-2003",
+      "display_category": "Account Issue",
+      "expected_category": "account",
+      "expected_flow": [
+        "classify_ticket",
+        "respond",
+        "close_ticket"
+      ],
+      "max_steps": 6,
+      "policy_rules": [
+        "Two-factor authentication failures require identity verification before disabling MFA.",
+        "Agents should guide the customer through backup code recovery if available."
+      ],
+      "reply_guidance": {
+        "positive_keywords": [
+          "verification",
+          "backup code",
+          "two-factor"
+        ],
+        "negative_keywords": [
+          "disable immediately",
+          "refund"
+        ]
+      },
+      "resolution": {
+        "needs_escalation": false,
+        "can_close_after_response": true
+      },
+      "customer_simulation": {
+        "after_good_response": "I do have backup codes, thanks for mentioning that.",
+        "after_bad_response": "You did not explain how I should recover the two-factor access.",
+        "after_failed_close": "This is still unresolved because I cannot sign in yet."
+      },
+      "ticket": {
+        "id": "TKT-M-2003",
+        "customer": "Daniel Kim",
+        "issue": "My authenticator app reset and I cannot get past two-factor login anymore.",
+        "order_id": "ORD-20003",
+        "product": "Business Account Portal",
+        "order_date_text": "10 hours ago"
+      }
+    },
+    {
+      "ticket_id": "M-2004",
+      "display_category": "Delivery Problem",
+      "expected_category": "delivery",
+      "expected_flow": [
+        "classify_ticket",
+        "respond",
+        "close_ticket"
+      ],
+      "max_steps": 6,
+      "policy_rules": [
+        "Partially delivered orders should be traced before refunding missing items.",
+        "Agents should explain the trace window and replacement options."
+      ],
+      "reply_guidance": {
+        "positive_keywords": [
+          "trace",
+          "missing items",
+          "replacement"
+        ],
+        "negative_keywords": [
+          "full refund now",
+          "cannot help"
+        ]
+      },
+      "resolution": {
+        "needs_escalation": false,
+        "can_close_after_response": true
+      },
+      "customer_simulation": {
+        "after_good_response": "Please start the trace and replacement review for the missing items.",
+        "after_bad_response": "I still need help with the missing package items.",
+        "after_failed_close": "This should stay open until the missing items are addressed."
+      },
+      "ticket": {
+        "id": "TKT-M-2004",
+        "customer": "Emma Wilson",
+        "issue": "My order was delivered but two items from the bundle were missing from the box.",
+        "order_id": "ORD-20004",
+        "product": "Kitchen Starter Bundle",
+        "order_date_text": "2 days ago"
+      }
+    },
+    {
+      "ticket_id": "M-2005",
+      "display_category": "Technical Support",
+      "expected_category": "technical",
+      "expected_flow": [
+        "classify_ticket",
+        "respond",
+        "close_ticket"
+      ],
+      "max_steps": 6,
+      "policy_rules": [
+        "Desktop software activation failures should be handled with license validation and reinstall guidance first.",
+        "Agents should confirm the activation email and license key format."
+      ],
+      "reply_guidance": {
+        "positive_keywords": [
+          "license",
+          "activation",
+          "reinstall"
+        ],
+        "negative_keywords": [
+          "refund",
+          "escalate"
+        ]
+      },
+      "resolution": {
+        "needs_escalation": false,
+        "can_close_after_response": true
+      },
+      "customer_simulation": {
+        "after_good_response": "I can retry activation after validating the license key.",
+        "after_bad_response": "You did not help with the activation issue.",
+        "after_failed_close": "The software still is not activated, so this cannot be closed."
+      },
+      "ticket": {
+        "id": "TKT-M-2005",
+        "customer": "Noah Carter",
+        "issue": "My desktop app says the license key is invalid even though I just purchased it.",
+        "order_id": "ORD-20005",
+        "product": "Desktop Design Suite",
+        "order_date_text": "9 hours ago"
+      }
+    }
+  ]
+}

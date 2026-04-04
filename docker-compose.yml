@@ -1,0 +1,21 @@
+services:
+  python-backend:
+    build:
+      context: .
+      dockerfile: docker/python.Dockerfile
+    environment:
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      OPENENV_RANDOM_SEED: ${OPENENV_RANDOM_SEED:-7}
+    ports:
+      - "8000:8000"
+
+  next-ui:
+    build:
+      context: .
+      dockerfile: docker/next.Dockerfile
+    environment:
+      PYTHON_BACKEND_URL: http://python-backend:8000
+    depends_on:
+      - python-backend
+    ports:
+      - "3000:3000"

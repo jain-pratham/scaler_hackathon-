@@ -1,0 +1,224 @@
+{
+  "metadata": {
+    "difficulty": "easy",
+    "total_count": 5,
+    "version": "1.0"
+  },
+  "tasks": [
+    {
+      "ticket_id": "E-1001",
+      "display_category": "Refund Request",
+      "expected_category": "refund",
+      "expected_flow": [
+        "classify_ticket",
+        "respond",
+        "close_ticket"
+      ],
+      "max_steps": 5,
+      "policy_rules": [
+        "Damaged items reported within 7 days qualify for a refund or replacement.",
+        "Agents should apologize and confirm the refund timeline before closing."
+      ],
+      "reply_guidance": {
+        "positive_keywords": [
+          "sorry",
+          "refund",
+          "damaged"
+        ],
+        "negative_keywords": [
+          "cannot",
+          "30 days"
+        ]
+      },
+      "resolution": {
+        "needs_escalation": false,
+        "can_close_after_response": true
+      },
+      "customer_simulation": {
+        "after_good_response": "Thanks for explaining the refund steps.",
+        "after_bad_response": "I still need help with the damaged item.",
+        "after_failed_close": "This should stay open until the refund is confirmed."
+      },
+      "ticket": {
+        "id": "TKT-E-1001",
+        "customer": "John Smith",
+        "issue": "The Bluetooth speaker arrived cracked and I want a refund.",
+        "order_id": "ORD-10001",
+        "product": "Bluetooth Speaker",
+        "order_date_text": "5 days ago"
+      }
+    },
+    {
+      "ticket_id": "E-1002",
+      "display_category": "Return Request",
+      "expected_category": "return",
+      "expected_flow": [
+        "classify_ticket",
+        "respond",
+        "close_ticket"
+      ],
+      "max_steps": 5,
+      "policy_rules": [
+        "Unworn apparel can be returned within 14 days.",
+        "Agents should provide the prepaid label and the return steps."
+      ],
+      "reply_guidance": {
+        "positive_keywords": [
+          "return",
+          "label",
+          "14 days"
+        ],
+        "negative_keywords": [
+          "keep it",
+          "no return"
+        ]
+      },
+      "resolution": {
+        "needs_escalation": false,
+        "can_close_after_response": true
+      },
+      "customer_simulation": {
+        "after_good_response": "The return label instructions are clear, thank you.",
+        "after_bad_response": "You did not explain how I should return it.",
+        "after_failed_close": "I still need the return instructions."
+      },
+      "ticket": {
+        "id": "TKT-E-1002",
+        "customer": "Sarah Johnson",
+        "issue": "I received the wrong size running shoes and need to return them.",
+        "order_id": "ORD-10002",
+        "product": "Running Shoes",
+        "order_date_text": "2 days ago"
+      }
+    },
+    {
+      "ticket_id": "E-1003",
+      "display_category": "Account Issue",
+      "expected_category": "account",
+      "expected_flow": [
+        "classify_ticket",
+        "respond",
+        "close_ticket"
+      ],
+      "max_steps": 5,
+      "policy_rules": [
+        "Password reset links are valid for 30 minutes.",
+        "Agents should verify the email on file and resend a fresh reset link."
+      ],
+      "reply_guidance": {
+        "positive_keywords": [
+          "reset",
+          "email",
+          "link"
+        ],
+        "negative_keywords": [
+          "refund",
+          "escalate"
+        ]
+      },
+      "resolution": {
+        "needs_escalation": false,
+        "can_close_after_response": true
+      },
+      "customer_simulation": {
+        "after_good_response": "Perfect, I will use the new password reset link.",
+        "after_bad_response": "That does not help me access my account.",
+        "after_failed_close": "Please do not close this until I can log in."
+      },
+      "ticket": {
+        "id": "TKT-E-1003",
+        "customer": "Mike Williams",
+        "issue": "I cannot log in after I reset my password this morning.",
+        "order_id": "ORD-10003",
+        "product": "Premium Subscription",
+        "order_date_text": "1 day ago"
+      }
+    },
+    {
+      "ticket_id": "E-1004",
+      "display_category": "Delivery Problem",
+      "expected_category": "delivery",
+      "expected_flow": [
+        "classify_ticket",
+        "respond",
+        "close_ticket"
+      ],
+      "max_steps": 5,
+      "policy_rules": [
+        "Shipping delays under 48 hours should be tracked before refunding.",
+        "Agents should share the tracking review timeline."
+      ],
+      "reply_guidance": {
+        "positive_keywords": [
+          "track",
+          "delivery",
+          "update"
+        ],
+        "negative_keywords": [
+          "refund now",
+          "ignore"
+        ]
+      },
+      "resolution": {
+        "needs_escalation": false,
+        "can_close_after_response": true
+      },
+      "customer_simulation": {
+        "after_good_response": "I appreciate the tracking update.",
+        "after_bad_response": "I still do not know where my package is.",
+        "after_failed_close": "The delivery issue is not resolved yet."
+      },
+      "ticket": {
+        "id": "TKT-E-1004",
+        "customer": "Emily Brown",
+        "issue": "My package says out for delivery but it never arrived yesterday.",
+        "order_id": "ORD-10004",
+        "product": "Home Essentials Bundle",
+        "order_date_text": "1 day ago"
+      }
+    },
+    {
+      "ticket_id": "E-1005",
+      "display_category": "Technical Support",
+      "expected_category": "technical",
+      "expected_flow": [
+        "classify_ticket",
+        "respond",
+        "close_ticket"
+      ],
+      "max_steps": 5,
+      "policy_rules": [
+        "App sync issues should be resolved with cache clearing and a fresh login first.",
+        "Agents should provide a short troubleshooting sequence."
+      ],
+      "reply_guidance": {
+        "positive_keywords": [
+          "cache",
+          "log in",
+          "sync"
+        ],
+        "negative_keywords": [
+          "refund",
+          "escalate"
+        ]
+      },
+      "resolution": {
+        "needs_escalation": false,
+        "can_close_after_response": true
+      },
+      "customer_simulation": {
+        "after_good_response": "I can try the cache clear and login steps now.",
+        "after_bad_response": "You did not explain how to fix the sync issue.",
+        "after_failed_close": "I still need the troubleshooting steps."
+      },
+      "ticket": {
+        "id": "TKT-E-1005",
+        "customer": "Ava Thompson",
+        "issue": "The mobile app is not syncing my subscription status after I log in.",
+        "order_id": "ORD-10005",
+        "product": "Mobile Companion App",
+        "order_date_text": "8 hours ago"
+      }
+    }
+  ]
+}

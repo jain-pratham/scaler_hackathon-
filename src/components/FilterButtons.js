@@ -13,6 +13,7 @@ export default function FilterButtons({ selectedFilter = 'all', onFilterChange }
   return (
     <div className={styles.filterContainer}>
       <h3 className={styles.filterTitle}>Filter Tickets</h3>
+
       <div className={styles.buttonGroup}>
         {difficultyLevels.map((level) => (
           <button

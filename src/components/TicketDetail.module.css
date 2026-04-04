@@ -1,13 +1,16 @@
-﻿.detailContainer {
+.chatCard {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  border-radius: 18px;
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.1);
+  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  height: 100%;
-  min-height: 0;
+  overflow: hidden;
 }
 
 .emptyState {
-  grid-column: 1 / -1;
   background: white;
   border-radius: 12px;
   padding: 28px 16px;
@@ -17,128 +20,183 @@
   box-shadow: 0 2px 10px rgba(30, 41, 59, 0.1);
 }
 
-.ticketInfoSection {
-  background: linear-gradient(180deg, #ffffff 0%, #f6f9fd 100%);
-  border-radius: 12px;
-  padding: 14px;
-  box-shadow: 0 2px 10px rgba(30, 41, 59, 0.1);
-}
-
-.conversationSection {
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-  border-radius: 12px;
-  padding: 14px;
-  box-shadow: 0 2px 10px rgba(30, 41, 59, 0.1);
+.chatHeader {
   display: flex;
-  flex-direction: column;
-  min-height: 0;
-  flex: 1;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid #dbe4ef;
 }
 
-.sectionTitle {
-  font-size: 14px;
-  font-weight: 700;
-  color: white;
-  background: linear-gradient(135deg, #436ea3 0%, #2e557f 100%);
-  margin: -14px -14px 10px -14px;
-  padding: 11px 14px;
-  border-radius: 12px 12px 0 0;
-}
-
-.conversationSection .sectionTitle {
-  background: linear-gradient(135deg, #334155 0%, #1f2937 100%);
-}
-
-.infoGrid {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.infoRow {
-  display: grid;
-  grid-template-columns: 96px 1fr;
-  gap: 8px;
-  align-items: start;
-}
-
-.infoRow label {
-  font-weight: 700;
-  color: #334155;
-  font-size: 12px;
-}
-
-.infoRow span {
-  color: #334155;
-  font-size: 12px;
-  line-height: 1.35;
-}
-
-.ticketId {
-  font-weight: 700;
-  color: #1d4ed8;
-  font-family: 'Courier New', monospace;
-}
-
-.issueText {
-  line-height: 1.4;
-  background: rgba(226, 232, 240, 0.5);
-  padding: 6px 8px;
-  border-radius: 6px;
-}
-
-.statusBadge {
-  display: inline-block;
-  background: #1f9b59;
-  color: white;
-  padding: 3px 10px;
-  border-radius: 999px;
+.eyebrow {
+  margin: 0 0 4px 0;
+  color: #2563eb;
   font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.title {
+  margin: 0;
+  color: #0f172a;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.toggleLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #334155;
+  font-size: 12px;
   font-weight: 700;
-  text-transform: capitalize;
+}
+
+.autoButton,
+.primaryButton,
+.secondaryButton,
+.draftButton,
+.sendButton {
+  border: none;
+  border-radius: 10px;
+  color: white;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  transition: transform 0.15s ease, background-color 0.2s ease;
+}
+
+.autoButton {
+  height: 38px;
+  padding: 0 14px;
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+}
+
+.actionBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  background: rgba(248, 250, 252, 0.9);
+}
+
+.actionGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.categorySelect {
+  min-width: 170px;
+  height: 38px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: white;
+  color: #1f2937;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.primaryButton {
+  height: 38px;
+  padding: 0 16px;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+}
+
+.secondaryButton {
+  height: 38px;
+  padding: 0 16px;
+  background: linear-gradient(135deg, #475569 0%, #334155 100%);
+}
+
+.feedbackBox {
+  margin: 10px 20px 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+}
+
+.feedbackBox p {
+  margin: 0;
+  color: #1e3a8a;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.feedbackBox p + p {
+  margin-top: 4px;
+}
+
+.errorText {
+  margin: 10px 20px 0;
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .conversationBox {
-  background: #f8fafc;
-  border-radius: 8px;
-  padding: 10px;
-  overflow: hidden;
+  margin: 10px 20px 8px;
+  padding: 12px;
+  border: 1px solid #dbe4ef;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 32%),
+    linear-gradient(180deg, #f8fbff 0%, #f8fafc 100%);
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 10px;
-  border: 1px solid #e2e8f0;
-  flex: 1;
-  min-height: 0;
+  justify-content: flex-start;
+  gap: 10px;
+  scroll-behavior: smooth;
+  align-content: flex-start;
 }
 
 .message {
-  padding: 8px 10px;
-  border-radius: 8px;
-  max-width: 90%;
-  word-wrap: break-word;
+  padding: 10px 12px;
+  border-radius: 12px;
+  max-width: 88%;
+  overflow-wrap: anywhere;
 }
 
 .message p {
   margin: 0;
-  font-size: 13px;
-  line-height: 1.35;
+  font-size: 14px;
+  line-height: 1.45;
 }
 
 .messageBadge {
   display: inline-block;
-  font-size: 11px;
-  font-weight: 700;
-  margin-bottom: 4px;
-  padding: 2px 8px;
-  border-radius: 4px;
+  margin-bottom: 6px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
   text-transform: uppercase;
+  letter-spacing: 0.4px;
 }
 
 .agentMessage {
+  align-self: flex-start;
   background: #d7f0de;
   border-left: 4px solid #2ca74b;
-  align-self: flex-start;
 }
 
 .agentMessage .messageBadge {
@@ -151,9 +209,9 @@
 }
 
 .customerMessage {
+  align-self: flex-end;
   background: #fff4cf;
   border-left: 4px solid #f0b429;
-  align-self: flex-end;
 }
 
 .customerMessage .messageBadge {
@@ -165,40 +223,138 @@
   color: #7a4e11;
 }
 
-.replyInput {
-  width: 100%;
-  padding: 9px 10px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  font-size: 13px;
-  font-family: inherit;
-  resize: none;
-  min-height: 50px;
-  transition: border-color 0.2s ease;
+.systemMessage {
+  align-self: flex-start;
+  max-width: 88%;
+  background: #e2e8f0;
+  border-left: 4px solid #64748b;
 }
 
-.replyInput:focus {
+.systemMessage .messageBadge {
+  color: white;
+  background: #64748b;
+}
+
+.systemMessage p {
+  color: #334155;
+}
+
+.inputPanel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px;
+  padding: 10px 20px 14px;
+  border-top: 1px solid #e2e8f0;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 -10px 24px rgba(148, 163, 184, 0.12);
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+}
+
+.draftButton {
+  width: 128px;
+  align-self: end;
+  min-height: 52px;
+  background: linear-gradient(135deg, #475569 0%, #334155 100%);
+}
+
+.replyInput {
+  width: 100%;
+  min-height: 52px;
+  max-height: 120px;
+  resize: none;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 14px;
+  line-height: 1.45;
+  font-family: inherit;
+}
+
+.replyInput:focus,
+.categorySelect:focus {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
 }
 
-.replyInput::placeholder {
-  color: #94a3b8;
+.sendButton {
+  width: 120px;
+  align-self: end;
+  min-height: 52px;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+}
+
+.autoButton:hover,
+.primaryButton:hover,
+.secondaryButton:hover,
+.draftButton:hover,
+.sendButton:hover {
+  transform: translateY(-1px);
+}
+
+.autoButton:disabled,
+.primaryButton:disabled,
+.secondaryButton:disabled,
+.draftButton:disabled,
+.sendButton:disabled {
+  background: #cbd5e1;
+  cursor: not-allowed;
+  transform: none;
+}
+
+@media (max-width: 1200px) {
+  .chatHeader,
+  .actionBar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .toggleRow {
+    justify-content: flex-start;
+  }
 }
 
 @media (max-width: 768px) {
-  .ticketInfoSection,
-  .conversationSection {
-    padding: 12px;
+  .chatCard {
+    height: auto;
   }
 
-  .sectionTitle {
-    margin: -12px -12px 10px -12px;
-    padding: 10px 12px;
+  .chatHeader,
+  .actionBar,
+  .inputPanel {
+    padding-left: 14px;
+    padding-right: 14px;
   }
 
-  .infoRow {
-    grid-template-columns: 88px 1fr;
+  .conversationBox {
+    margin-left: 14px;
+    margin-right: 14px;
+    min-height: 320px;
+  }
+
+  .title {
+    font-size: 22px;
+  }
+
+  .actionGroup,
+  .inputPanel {
+    width: 100%;
+    grid-template-columns: 1fr;
+  }
+
+  .categorySelect,
+  .primaryButton,
+  .secondaryButton,
+  .autoButton,
+  .draftButton,
+  .sendButton {
+    width: 100%;
+  }
+
+  .sendButton {
+    min-height: 44px;
   }
 }

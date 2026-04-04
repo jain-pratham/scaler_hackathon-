@@ -1,0 +1,234 @@
+{
+  "metadata": {
+    "difficulty": "hard",
+    "total_count": 5,
+    "version": "1.0"
+  },
+  "tasks": [
+    {
+      "ticket_id": "H-3001",
+      "display_category": "Delivery Problem",
+      "expected_category": "delivery",
+      "expected_flow": [
+        "classify_ticket",
+        "respond",
+        "escalate",
+        "close_ticket"
+      ],
+      "max_steps": 7,
+      "policy_rules": [
+        "High-value orders with missing items after delivery require a logistics escalation.",
+        "Agents should apologize, document the missing items, and explain the specialist review timeline."
+      ],
+      "reply_guidance": {
+        "positive_keywords": [
+          "sorry",
+          "missing items",
+          "escalate"
+        ],
+        "negative_keywords": [
+          "close",
+          "refund immediately"
+        ]
+      },
+      "resolution": {
+        "needs_escalation": true,
+        "can_close_after_response": false
+      },
+      "customer_simulation": {
+        "after_good_response": "Please escalate it. Several expensive items are still missing.",
+        "after_bad_response": "This is too serious for a generic response.",
+        "after_escalation": "Thank you. I will wait for the specialist review update.",
+        "after_failed_close": "Do not close this while the missing high-value items are unresolved."
+      },
+      "ticket": {
+        "id": "TKT-H-3001",
+        "customer": "Ethan Parker",
+        "issue": "My delivery showed up with the outer box damaged and three expensive accessories missing from the package.",
+        "order_id": "ORD-30001",
+        "product": "Photography Kit Bundle",
+        "order_date_text": "Today"
+      }
+    },
+    {
+      "ticket_id": "H-3002",
+      "display_category": "Account Issue",
+      "expected_category": "account",
+      "expected_flow": [
+        "classify_ticket",
+        "respond",
+        "escalate",
+        "close_ticket"
+      ],
+      "max_steps": 7,
+      "policy_rules": [
+        "Suspected account takeover cases require a security escalation after initial customer guidance.",
+        "Agents should instruct the customer to secure payment methods and explain that the security team will review access logs."
+      ],
+      "reply_guidance": {
+        "positive_keywords": [
+          "secure",
+          "payment methods",
+          "escalate"
+        ],
+        "negative_keywords": [
+          "ignore",
+          "close"
+        ]
+      },
+      "resolution": {
+        "needs_escalation": true,
+        "can_close_after_response": false
+      },
+      "customer_simulation": {
+        "after_good_response": "I already locked my card. Please escalate the account takeover investigation.",
+        "after_bad_response": "This sounds like fraud and needs urgent help.",
+        "after_escalation": "Thank you for escalating this to the security team.",
+        "after_failed_close": "This cannot be closed while my account access is compromised."
+      },
+      "ticket": {
+        "id": "TKT-H-3002",
+        "customer": "Chloe Adams",
+        "issue": "Someone changed my shipping address, placed an order, and I can no longer trust that my account is secure.",
+        "order_id": "ORD-30002",
+        "product": "Account Security",
+        "order_date_text": "3 hours ago"
+      }
+    },
+    {
+      "ticket_id": "H-3003",
+      "display_category": "Refund Request",
+      "expected_category": "refund",
+      "expected_flow": [
+        "classify_ticket",
+        "respond",
+        "escalate",
+        "close_ticket"
+      ],
+      "max_steps": 7,
+      "policy_rules": [
+        "Large corporate billing disputes must be escalated to billing operations after the agent acknowledges the error.",
+        "Agents should explain that invoice adjustments require specialist approval."
+      ],
+      "reply_guidance": {
+        "positive_keywords": [
+          "invoice",
+          "adjustment",
+          "escalate"
+        ],
+        "negative_keywords": [
+          "cannot",
+          "close"
+        ]
+      },
+      "resolution": {
+        "needs_escalation": true,
+        "can_close_after_response": false
+      },
+      "customer_simulation": {
+        "after_good_response": "Please escalate the invoice adjustment. The finance team is waiting for it.",
+        "after_bad_response": "This billing error needs more than a basic response.",
+        "after_escalation": "Thanks for moving this to billing operations.",
+        "after_failed_close": "The invoice dispute is still open and unresolved."
+      },
+      "ticket": {
+        "id": "TKT-H-3003",
+        "customer": "Aarav Mehta",
+        "issue": "Our company invoice charged ten extra user seats and I need the account rebilled correctly.",
+        "order_id": "ORD-30003",
+        "product": "Enterprise Team Plan",
+        "order_date_text": "2 days ago"
+      }
+    },
+    {
+      "ticket_id": "H-3004",
+      "display_category": "Technical Support",
+      "expected_category": "technical",
+      "expected_flow": [
+        "classify_ticket",
+        "respond",
+        "escalate",
+        "close_ticket"
+      ],
+      "max_steps": 7,
+      "policy_rules": [
+        "Recurring data-loss bugs require technical escalation after the first troubleshooting response.",
+        "Agents should acknowledge the seriousness of the data issue and explain how engineering will investigate logs."
+      ],
+      "reply_guidance": {
+        "positive_keywords": [
+          "data",
+          "investigate",
+          "escalate"
+        ],
+        "negative_keywords": [
+          "ignore",
+          "close"
+        ]
+      },
+      "resolution": {
+        "needs_escalation": true,
+        "can_close_after_response": false
+      },
+      "customer_simulation": {
+        "after_good_response": "Please escalate this. I cannot risk losing more saved project data.",
+        "after_bad_response": "This is serious data loss, not a simple glitch.",
+        "after_escalation": "Thank you for routing this to engineering support.",
+        "after_failed_close": "The data-loss case is still active and cannot be closed."
+      },
+      "ticket": {
+        "id": "TKT-H-3004",
+        "customer": "Mia Robinson",
+        "issue": "My saved design files disappear every time the app syncs overnight, and local recovery has failed twice already.",
+        "order_id": "ORD-30004",
+        "product": "Cloud Design Workspace",
+        "order_date_text": "1 day ago"
+      }
+    },
+    {
+      "ticket_id": "H-3005",
+      "display_category": "Delivery Problem",
+      "expected_category": "delivery",
+      "expected_flow": [
+        "classify_ticket",
+        "respond",
+        "escalate",
+        "close_ticket"
+      ],
+      "max_steps": 7,
+      "policy_rules": [
+        "Cross-border customs holds with compliance flags require specialist escalation.",
+        "Agents should explain that customs documents will be reviewed by the international shipping team."
+      ],
+      "reply_guidance": {
+        "positive_keywords": [
+          "customs",
+          "international shipping team",
+          "escalate"
+        ],
+        "negative_keywords": [
+          "refund now",
+          "close"
+        ]
+      },
+      "resolution": {
+        "needs_escalation": true,
+        "can_close_after_response": false
+      },
+      "customer_simulation": {
+        "after_good_response": "Please escalate the customs hold. I need the international shipping team to review it.",
+        "after_bad_response": "This customs problem clearly needs a specialist.",
+        "after_escalation": "Thanks for escalating the customs hold case.",
+        "after_failed_close": "The cross-border delivery hold is still active."
+      },
+      "ticket": {
+        "id": "TKT-H-3005",
+        "customer": "Yusuf Malik",
+        "issue": "My international shipment has been stuck in customs for a week, and the carrier says a compliance review is blocking release.",
+        "order_id": "ORD-30005",
+        "product": "Cross-Border Electronics Order",
+        "order_date_text": "7 days ago"
+      }
+    }
+  ]
+}
