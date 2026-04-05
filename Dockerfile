@@ -1,4 +1,4 @@
-﻿# ---------- STEP 1: BUILD FRONTEND ----------
+# ---------- STEP 1: BUILD FRONTEND ----------
 FROM node:22 AS frontend
 
 WORKDIR /app
@@ -28,4 +28,5 @@ COPY --from=frontend /app ./
 EXPOSE 8000
 
 # RUN BOTH BACKEND + FRONTEND
+ENV PYTHON_BACKEND_URL=http://127.0.0.1:8001
 CMD bash -c "uvicorn backend.app.main:app --host 0.0.0.0 --port 8001 & npx next start -p 8000"
