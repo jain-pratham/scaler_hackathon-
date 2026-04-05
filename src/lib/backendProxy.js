@@ -1,5 +1,5 @@
-﻿const BACKEND_URL = process.env.PYTHON_BACKEND_URL ?? 'http://127.0.0.1:8000';
-const BACKEND_TIMEOUT_MS = 5000;
+const BACKEND_URL = process.env.PYTHON_BACKEND_URL ?? 'http://127.0.0.1:8000';
+const BACKEND_TIMEOUT_MS = 120000;
 
 export async function proxyToBackend({
   path,

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import StageProgressBar from './StageProgressBar';
@@ -10,7 +10,7 @@ import CompletionModal from './CompletionModal';
 import styles from './Dashboard.module.css';
 
 const SESSION_STORAGE_KEY = 'customer-support-session-id';
-const REQUEST_TIMEOUT_MS = 5000;
+const REQUEST_TIMEOUT_MS = 120000;
 const CATEGORY_VALUE_BY_LABEL = {
   'Refund Request': 'refund',
   'Return Request': 'return',

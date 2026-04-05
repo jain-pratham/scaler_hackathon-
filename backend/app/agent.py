@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import re
 import urllib.request
@@ -121,7 +121,7 @@ class GeminiDecisionAgent:
         )
         request.add_header("Content-Type", "application/json")
 
-        with urllib.request.urlopen(request, timeout=20) as response:
+        with urllib.request.urlopen(request, timeout=120) as response:
             payload = GeminiGenerateResponse.model_validate_json(response.read().decode("utf-8"))
 
         text = self._extract_candidate_text(payload)
@@ -136,7 +136,7 @@ class GeminiDecisionAgent:
         )
         request.add_header("Content-Type", "application/json")
 
-        with urllib.request.urlopen(request, timeout=20) as response:
+        with urllib.request.urlopen(request, timeout=120) as response:
             payload = GeminiGenerateResponse.model_validate_json(response.read().decode("utf-8"))
 
         text = self._extract_candidate_text(payload)
