@@ -1,4 +1,14 @@
-﻿# Customer Support Ticket Resolution Environment
+﻿---
+title: Customer Support OpenEnv
+emoji: 🤖
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_file: backend/app/main.py
+pinned: false
+---
+
+# Customer Support Ticket Resolution Environment
 
 ## Environment Description
 
