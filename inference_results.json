@@ -1,11 +1,43 @@
 {
   "seed": 7,
-  "average_score": 0.9999,
+  "average_score": 1.0,
   "episodes": [
     {
       "difficulty": "easy",
       "ticket_id": "TKT-E-1001",
-      "reward_score": 0.9999,
+      "reward_score": 1.0,
+      "steps_taken": 3,
+      "done": true,
+      "status": "closed"
+    },
+    {
+      "difficulty": "easy",
+      "ticket_id": "TKT-E-1002",
+      "reward_score": 1.0,
+      "steps_taken": 3,
+      "done": true,
+      "status": "closed"
+    },
+    {
+      "difficulty": "easy",
+      "ticket_id": "TKT-E-1003",
+      "reward_score": 1.0,
+      "steps_taken": 3,
+      "done": true,
+      "status": "closed"
+    },
+    {
+      "difficulty": "easy",
+      "ticket_id": "TKT-E-1004",
+      "reward_score": 1.0,
+      "steps_taken": 3,
+      "done": true,
+      "status": "closed"
+    },
+    {
+      "difficulty": "easy",
+      "ticket_id": "TKT-E-1005",
+      "reward_score": 1.0,
       "steps_taken": 3,
       "done": true,
       "status": "closed"
@@ -13,7 +45,39 @@
     {
       "difficulty": "medium",
       "ticket_id": "TKT-M-2001",
-      "reward_score": 0.9999,
+      "reward_score": 1.0,
+      "steps_taken": 3,
+      "done": true,
+      "status": "closed"
+    },
+    {
+      "difficulty": "medium",
+      "ticket_id": "TKT-M-2002",
+      "reward_score": 1.0,
+      "steps_taken": 3,
+      "done": true,
+      "status": "closed"
+    },
+    {
+      "difficulty": "medium",
+      "ticket_id": "TKT-M-2003",
+      "reward_score": 1.0,
+      "steps_taken": 3,
+      "done": true,
+      "status": "closed"
+    },
+    {
+      "difficulty": "medium",
+      "ticket_id": "TKT-M-2004",
+      "reward_score": 1.0,
+      "steps_taken": 3,
+      "done": true,
+      "status": "closed"
+    },
+    {
+      "difficulty": "medium",
+      "ticket_id": "TKT-M-2005",
+      "reward_score": 1.0,
       "steps_taken": 3,
       "done": true,
       "status": "closed"
@@ -21,6 +85,38 @@
     {
       "difficulty": "hard",
       "ticket_id": "TKT-H-3001",
+      "reward_score": 1.0,
+      "steps_taken": 4,
+      "done": true,
+      "status": "closed"
+    },
+    {
+      "difficulty": "hard",
+      "ticket_id": "TKT-H-3002",
+      "reward_score": 1.0,
+      "steps_taken": 4,
+      "done": true,
+      "status": "closed"
+    },
+    {
+      "difficulty": "hard",
+      "ticket_id": "TKT-H-3003",
+      "reward_score": 1.0,
+      "steps_taken": 4,
+      "done": true,
+      "status": "closed"
+    },
+    {
+      "difficulty": "hard",
+      "ticket_id": "TKT-H-3004",
+      "reward_score": 1.0,
+      "steps_taken": 4,
+      "done": true,
+      "status": "closed"
+    },
+    {
+      "difficulty": "hard",
+      "ticket_id": "TKT-H-3005",
       "reward_score": 1.0,
       "steps_taken": 4,
       "done": true,

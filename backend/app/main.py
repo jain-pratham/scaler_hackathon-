@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import os
 from pathlib import Path
@@ -49,6 +49,18 @@ app = FastAPI(
 
 def resolve_session_id(x_session_id: Optional[str]) -> str:
     return x_session_id or DEFAULT_SESSION_ID
+
+
+@app.get("/")
+def root() -> dict[str, str]:
+    return {
+        "status": "ok",
+        "name": "Customer Support Ticket Resolution Environment",
+        "reset": "/reset",
+        "step": "/step",
+        "state": "/state",
+        "health": "/health",
+    }
 
 
 @app.get("/health", response_model=HealthResponse)

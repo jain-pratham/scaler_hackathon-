@@ -159,18 +159,27 @@ Run the deterministic baseline inference script:
 python inference.py
 ```
 
-The script imports the OpenAI client, reads `API_BASE_URL`, `MODEL_NAME`, and `HF_TOKEN`, makes no real API calls, and prints:
+The script:
+
+- imports the OpenAI client and reads `API_BASE_URL`, `MODEL_NAME`, and `HF_TOKEN`
+- falls back to a deterministic local policy when those variables are not configured or the remote call fails
+- emits structured `[START]`, `[STEP]`, and `[END]` logs with rewards formatted to two decimal places
+- evaluates every task across `easy`, `medium`, and `hard`
+- writes a summarized score report to `inference_results.json`
+
+Example log shape:
 
 ```text
-[START]
-[STEP] step=1, action=classify_ticket
-[STEP] step=2, action=respond
-[STEP] step=3, action=escalate
-[END]
+[START] task=customer-support-baseline:TKT-E-1001 env=CustomerSupportTicketResolutionEnv model=heuristic-fallback
+[STEP] step=1 action={"action":"classify_ticket","category":"refund"} reward=1.00 done=False error=remote_model_not_configured
+[STEP] step=2 action={"action":"respond","message":"..."} reward=1.00 done=False error=remote_model_not_configured
+[STEP] step=3 action={"action":"close_ticket"} reward=1.00 done=True error=remote_model_not_configured
+[END] success=True steps=3 score=1.00 rewards=[1.00, 1.00, 1.00]
 ```
 
 ## API Endpoints
 
+- `GET /`
 - `GET /health`
 - `GET /catalog`
 - `GET /reset`
