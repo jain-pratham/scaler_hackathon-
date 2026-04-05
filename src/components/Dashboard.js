@@ -246,7 +246,7 @@ export default function Dashboard({ initialTickets = [] }) {
     setErrorMessage('');
 
     try {
-      const response = await fetchWithTimeout('/auto-agent', {
+      const response = await fetchWithTimeout('/agent/auto', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -277,7 +277,7 @@ export default function Dashboard({ initialTickets = [] }) {
     setErrorMessage('');
 
     try {
-      const response = await fetchWithTimeout('/draft-reply', {
+      const response = await fetchWithTimeout('/agent/draft-reply', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
