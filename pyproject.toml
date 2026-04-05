@@ -10,10 +10,13 @@ authors = [
   { name = "OpenEnv", email = "help_openenvhackathon@scaler.com" },
 ]
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "fastapi>=0.115.0",
     "pydantic>=2.9.0",
     "uvicorn>=0.30.0",
-    "openai>=1.54.0"
+    "openenv-core>=0.2.0"
 ]
+
+[project.scripts]
+server = "backend.app.cli:run"
