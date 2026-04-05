@@ -1,80 +1,176 @@
-# Customer Support Ticket Resolution Environment
+﻿# Customer Support Ticket Resolution Environment
 
-Next.js provides the existing dashboard UI. Route Handlers under `src/app/api/*` act as the backend-for-frontend layer. A FastAPI service in `backend/app/` owns environment state, reward logic, customer simulation, and Gemini-powered auto-agent runs.
+## Environment Description
 
-## Architecture
+This project implements an OpenEnv-compatible customer support environment for resolving real-world ecommerce and SaaS support tickets. Agents must classify incoming tickets, send policy-compliant customer replies, escalate when required, and close tickets only when the issue is properly resolved.
 
-```text
-Dashboard UI (Next.js App Router)
-  -> /api/reset
-  -> /api/step
-  -> /api/state
-  -> /api/auto-agent
-       -> FastAPI environment
-            -> task JSON files
-            -> reward / grading logic
-            -> Gemini 1.5 Flash auto agent
+The app includes:
+
+- A Next.js App Router dashboard for human interaction and public route-handler APIs.
+- A FastAPI backend that owns environment state, task loading, grading, simulation, and deterministic agent execution.
+- Three difficulty tiers with policy-sensitive workflows:
+  - `easy`
+  - `medium`
+  - `hard`
+
+The public OpenEnv endpoints are:
+
+- `POST /reset`
+- `POST /step`
+- `GET /state`
+- `POST /agent/auto`
+
+These routes proxy to the backend service and are available from the single-container deployment.
+
+## Action Space
+
+Schema:
+
+```json
+{
+  "action": "classify_ticket | respond | escalate | close_ticket",
+  "message": "string | null",
+  "category": "string | null"
+}
 ```
 
-## What Is Implemented
+Rules:
 
-- `POST /api/reset`
-  - Resets the active environment for the selected difficulty.
-  - The UI also sends `ticketId` so clicking a queue item loads that exact task.
-- `POST /api/step`
-  - Supports `classify_ticket`, `respond`, `escalate`, and `close_ticket`.
-- `GET /api/state`
-  - Returns the current environment state for refresh or recovery.
-- `POST /api/auto-agent`
-  - Runs the Gemini loop until the task is done or the turn cap is reached.
-- Python environment modules
-  - `backend/app/tasks.py`
-  - `backend/app/grader.py`
-  - `backend/app/simulator.py`
-  - `backend/app/agent.py`
-  - `backend/app/env.py`
-  - `backend/app/main.py`
-- JSON task bundles
-  - `tasks/easy.json`
-  - `tasks/medium.json`
-  - `tasks/hard.json`
-- Docker support
-  - `docker/python.Dockerfile`
-  - `docker/next.Dockerfile`
-  - `docker-compose.yml`
+- `classify_ticket`
+  - Required field: `category`
+  - Allowed categories: `refund`, `return`, `delivery`, `account`, `technical`, `other`
+- `respond`
+  - Required field: `message`
+- `escalate`
+  - No extra fields required
+- `close_ticket`
+  - No extra fields required
 
-## UI Integration
+Example:
 
-The dashboard keeps the existing layout and now maps UI actions to the environment:
+```json
+{
+  "action": "respond",
+  "message": "I am sorry this happened. I have documented the issue and outlined the next steps.",
+  "category": null
+}
+```
 
-- Ticket selection -> `POST /api/reset`
-- `Classify` button -> `POST /api/step` with `action: "classify_ticket"`
-- Send message -> `POST /api/step` with `action: "respond"`
-- `Escalate` button -> `POST /api/step` with `action: "escalate"`
-- `Close` button -> `POST /api/step` with `action: "close_ticket"`
-- `Auto Agent Mode` or `Run Auto Agent` -> `POST /api/auto-agent`
+## Observation Space
 
-The UI updates from environment state:
+Schema:
 
-- chat from `conversation_history`
-- score panel from `reward_score` and `last_reward`
-- progress panel from `progress`
-- stage bar from `current_stage`
-- ticket status from `ticket.status`
+```json
+{
+  "difficulty": "easy | medium | hard | null",
+  "ticket": {
+    "id": "string",
+    "customer": "string",
+    "issue": "string",
+    "orderId": "string",
+    "product": "string",
+    "orderDateText": "string",
+    "category": "string",
+    "status": "string",
+    "difficulty": "easy | medium | hard"
+  },
+  "status": "string",
+  "done": "boolean",
+  "steps_taken": "integer",
+  "max_steps": "integer",
+  "max_possible_reward": "float",
+  "current_stage": "integer",
+  "last_reward": "float",
+  "reward_score": "float",
+  "cumulative_reward": "float",
+  "customer_ready_to_close": "boolean",
+  "available_categories": ["string"],
+  "available_actions": ["string"],
+  "progress": {
+    "classification": "pending | correct | incorrect",
+    "reply": "pending | completed | incorrect",
+    "escalation": "required | not_needed | completed | unnecessary"
+  },
+  "policy_rules": ["string"],
+  "reply_guidance": {
+    "positive_keywords": ["string"],
+    "negative_keywords": ["string"]
+  },
+  "conversation_history": [
+    {
+      "role": "system | customer | agent",
+      "message": "string"
+    }
+  ],
+  "episode_metrics": {
+    "actions_taken": ["string"],
+    "classification_correct": "boolean",
+    "reply_helpful": "boolean",
+    "escalation_correct": "boolean",
+    "closed_correctly": "boolean"
+  },
+  "info_messages": ["string"]
+}
+```
 
-## Environment Variables
+Idle `state()` returns a valid observation with `status: "idle"` and no active ticket.
 
-Create a root `.env.local` from `.env.example`.
+## Reward Function
+
+All rewards are deterministic floats in the range `0.0` to `1.0`.
+
+Per-action grading:
+
+- Classification
+  - correct: `1.0`
+  - incorrect: `0.0`
+- Response
+  - graded by positive keyword coverage, minimum message quality, off-policy penalties, and escalation expectation handling
+  - output range: `0.0` to `1.0`
+- Escalation
+  - correct after customer communication: `1.0`
+  - correct but premature: `0.6`
+  - unnecessary: `0.0`
+- Closure
+  - correct and efficient: `1.0`
+  - correct but late: `0.8`
+  - incorrect: `0.0`
+
+Episode score:
+
+- `cumulative_reward` is a normalized running score in the range `0.0` to `1.0`
+- `reward_score` is updated as:
+
+```text
+reward_score = cumulative_reward + (last_reward / max_possible_reward)
+```
+
+after clamping to `0.0` to `1.0`.
+
+This preserves partial-progress feedback and keeps every reward output inside the required `0.0` to `1.0` range.
+
+## Setup Instructions
+
+### Environment variables
+
+Create `.env.local` from `.env.example`.
 
 ```bash
+API_BASE_URL=
+MODEL_NAME=
+HF_TOKEN=
 PYTHON_BACKEND_URL=http://127.0.0.1:8000
-GEMINI_API_KEY=your_gemini_key
+GEMINI_API_KEY=
 OPENENV_RANDOM_SEED=7
 ```
 
-`GEMINI_API_KEY` is optional for development. If it is missing or Gemini fails, the backend falls back to a deterministic rule-based agent so the environment still works.
+Notes:
 
-## Local Run
+- `API_BASE_URL`, `MODEL_NAME`, and `HF_TOKEN` are used by `inference.py` through the OpenAI-compatible client.
+- `GEMINI_API_KEY` remains supported for the dashboard auto-agent and draft-reply backend.
+- `PYTHON_BACKEND_URL` is used by the Next.js route handlers to reach the local FastAPI backend.
+
+### Dependencies
 
 Install JavaScript dependencies:
 
@@ -88,6 +184,8 @@ Install Python dependencies:
 python -m pip install -r requirements.txt
 ```
 
+## Running Locally
+
 Start the FastAPI backend:
 
 ```bash
@@ -100,104 +198,113 @@ Start the Next.js UI:
 npm run dev:ui
 ```
 
-Open `http://localhost:3000`.
+Open:
 
-## Docker
+- UI: `http://127.0.0.1:3000`
+- Backend health: `http://127.0.0.1:8000/health`
 
-Run both services together:
+### OpenEnv API examples
 
-```bash
-docker compose up --build
-```
-
-UI: `http://localhost:3000`  
-FastAPI: `http://localhost:8000`
-
-## Example API Calls
-
-Reset to an easy ticket:
+Reset:
 
 ```bash
-curl -X POST http://localhost:3000/api/reset ^
+curl -X POST http://127.0.0.1:3000/reset ^
   -H "Content-Type: application/json" ^
-  -H "X-Session-Id: demo-session" ^
   -d "{\"difficulty\":\"easy\",\"ticketId\":\"TKT-E-1001\"}"
 ```
 
-Classify:
+Step:
 
 ```bash
-curl -X POST http://localhost:3000/api/step ^
+curl -X POST http://127.0.0.1:3000/step ^
   -H "Content-Type: application/json" ^
-  -H "X-Session-Id: demo-session" ^
   -d "{\"action\":\"classify_ticket\",\"category\":\"refund\"}"
 ```
 
-Respond:
+State:
 
 ```bash
-curl -X POST http://localhost:3000/api/step ^
-  -H "Content-Type: application/json" ^
-  -H "X-Session-Id: demo-session" ^
-  -d "{\"action\":\"respond\",\"message\":\"I am sorry the speaker arrived damaged. You are eligible for a refund within 7 days and I will confirm the refund timeline for you now.\"}"
+curl http://127.0.0.1:3000/state
 ```
 
-Escalate:
+## Running Inference
+
+Run the deterministic baseline inference script:
 
 ```bash
-curl -X POST http://localhost:3000/api/step ^
-  -H "Content-Type: application/json" ^
-  -H "X-Session-Id: demo-session" ^
-  -d "{\"action\":\"escalate\"}"
+python inference.py
 ```
 
-Close:
+Runtime behavior:
+
+- Uses `API_BASE_URL`, `MODEL_NAME`, and `HF_TOKEN` with the OpenAI client when configured.
+- Falls back to a deterministic local policy if the remote model is unavailable.
+- Prints logs in strict format:
+
+```text
+[START]
+[STEP] step=1, action=classify_ticket
+[STEP] step=2, action=respond
+[END]
+```
+
+Scores are written to `inference_results.json`.
+
+## Docker
+
+Build the single-container image:
 
 ```bash
-curl -X POST http://localhost:3000/api/step ^
-  -H "Content-Type: application/json" ^
-  -H "X-Session-Id: demo-session" ^
-  -d "{\"action\":\"close_ticket\"}"
+docker build -t openenv-customer-support .
 ```
 
-Read state:
+Run it:
 
 ```bash
-curl http://localhost:3000/api/state -H "X-Session-Id: demo-session"
+docker run --rm -p 7860:7860 --env-file .env.local openenv-customer-support
 ```
 
-Run the auto agent:
+The single container starts:
 
-```bash
-curl -X POST http://localhost:3000/api/auto-agent ^
-  -H "Content-Type: application/json" ^
-  -H "X-Session-Id: demo-session" ^
-  -d "{\"maxTurns\":8}"
+- FastAPI on `127.0.0.1:8000` inside the container
+- Next.js on the public port `7860`
+
+## Hugging Face Spaces
+
+This repository is configured for a single-container Docker deployment.
+
+Recommended Space settings:
+
+- SDK: `Docker`
+- App port: `7860`
+- Required variables:
+  - `API_BASE_URL`
+  - `MODEL_NAME`
+  - `HF_TOKEN`
+  - `GEMINI_API_KEY`
+  - `OPENENV_RANDOM_SEED`
+
+The public OpenEnv-compatible paths exposed by the Space are:
+
+- `/reset`
+- `/step`
+- `/state`
+- `/agent/auto`
+
+## Project Structure
+
+```text
+backend/app/models.py      Typed Pydantic models
+backend/app/env.py         Environment implementation
+backend/app/grader.py      Deterministic grading
+backend/app/tasks.py       Task repository
+backend/app/simulator.py   Customer simulation
+backend/app/agent.py       Gemini-backed / fallback agent
+src/app/reset/route.js     Public reset endpoint
+src/app/step/route.js      Public step endpoint
+src/app/state/route.js     Public state endpoint
+inference.py               Deterministic baseline runner
+openenv.yaml               OpenEnv configuration
+Dockerfile                 Single-container deployment
 ```
 
-## Reward System
-
-- correct classification: `+0.2`
-- helpful policy-compliant reply: `+0.2`
-- correct escalation: `+0.3`
-- correct closure: `+0.3`
-- efficient closure bonus: `+0.2`
-- incorrect classification: `-0.2`
-- poor reply: `-0.2`
-- unnecessary escalation: `-0.1`
-- early closing: `-0.3`
-
-The live score shown in the UI is a normalized `0.00` to `1.00` value derived from cumulative reward.
-
-## Difficulty Levels
-
-- `easy`
-  - single-issue tickets that typically resolve after classify -> respond -> close
-- `medium`
-  - more policy-heavy tickets that still close without escalation when handled well
-- `hard`
-  - complex tickets that require a helpful response, escalation, and then closure
-
-## OpenEnv Notes
-
-`openenv.yaml` documents the action space, observation shape, reward bounds, and task files. The FastAPI environment itself exposes the `reset`, `step`, and `state` primitives expected by the UI and by any future agent runner.

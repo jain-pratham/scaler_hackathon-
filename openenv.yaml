@@ -1,22 +1,32 @@
-name: "CustomerSupportTicketResolutionEnv"
-version: "1.0.0"
-description: "Customer support ticket resolution environment with Next.js UI, FastAPI backend, and Gemini auto-agent support."
+﻿name: "CustomerSupportTicketResolutionEnv"
+version: "1.1.0"
+description: "Customer support ticket resolution environment with typed OpenEnv models, public route handlers, and deterministic inference support."
 entrypoint: "backend.app.main:app"
 difficulty_levels:
   - easy
   - medium
   - hard
 action_space:
-  type: "discrete"
-  actions:
-    - classify_ticket
-    - respond
-    - escalate
-    - close_ticket
+  type: "json"
+  schema:
+    action:
+      type: "string"
+      enum:
+        - classify_ticket
+        - respond
+        - escalate
+        - close_ticket
+    message:
+      type: "string"
+      nullable: true
+    category:
+      type: "string"
+      nullable: true
 observation_space:
   type: "json"
+  schema_ref: "backend.app.models.ObservationModel"
 reward_bounds:
-  min: -1.0
+  min: 0.0
   max: 1.0
 api:
   reset: "/reset"

@@ -5,6 +5,8 @@ import re
 import urllib.request
 from typing import Optional
 
+from .models import AgentDecision, ObservationModel
+
 
 GEMINI_MODEL = "gemini-1.5-flash"
 
@@ -59,7 +61,7 @@ class GeminiDecisionAgent:
     def __init__(self, api_key: Optional[str]) -> None:
         self.api_key = api_key
 
-    def decide(self, state: dict[str, object]) -> dict[str, str]:
+    def decide(self, state: ObservationModel) -> AgentDecision:
         if not self.api_key:
             return self._fallback_decision(state)
 
@@ -69,7 +71,7 @@ class GeminiDecisionAgent:
         except Exception:
             return self._fallback_decision(state)
 
-    def generate_reply(self, state: dict[str, object]) -> str:
+    def generate_reply(self, state: ObservationModel) -> str:
         if not self.api_key:
             return self._fallback_reply(state)
 
@@ -79,17 +81,7 @@ class GeminiDecisionAgent:
         except Exception:
             return self._fallback_reply(state)
 
-    def _build_prompt(self, state: dict[str, object]) -> str:
-        public_state = {
-            "ticket": state["ticket"],
-            "history": state["conversation_history"],
-            "policy_rules": state["policy_rules"],
-            "reply_guidance": state.get("reply_guidance", {}),
-            "progress": state["progress"],
-            "available_categories": state["available_categories"],
-            "available_actions": state["available_actions"],
-            "status": state["status"],
-        }
+    def _build_prompt(self, state: ObservationModel) -> str:
         return (
             "You are a customer support ticket resolution agent.\n"
             "Decide the next single action for the environment.\n"
@@ -98,19 +90,10 @@ class GeminiDecisionAgent:
             "If action is classify_ticket, provide category.\n"
             "If action is respond, provide message.\n"
             "If a field is unused, return an empty string.\n\n"
-            f"STATE:\n{json.dumps(public_state, ensure_ascii=True)}"
+            f"STATE:\n{state.model_dump_json()}"
         )
 
-    def _build_reply_prompt(self, state: dict[str, object]) -> str:
-        public_state = {
-            "ticket": state["ticket"],
-            "history": state["conversation_history"],
-            "policy_rules": state["policy_rules"],
-            "reply_guidance": state.get("reply_guidance", {}),
-            "progress": state["progress"],
-            "status": state["status"],
-            "customer_ready_to_close": state.get("customer_ready_to_close", False),
-        }
+    def _build_reply_prompt(self, state: ObservationModel) -> str:
         return (
             "You are a customer support agent drafting a single reply to the customer.\n"
             "Write one helpful support message based on the ticket, conversation history, and policy.\n"
@@ -118,10 +101,10 @@ class GeminiDecisionAgent:
             "If the ticket is already resolved or awaiting close, do not repeat the same explanation.\n"
             "Instead, acknowledge the customer's confirmation and ask whether you may close the ticket.\n"
             "Return strict JSON only with one key: message.\n\n"
-            f"STATE:\n{json.dumps(public_state, ensure_ascii=True)}"
+            f"STATE:\n{state.model_dump_json()}"
         )
 
-    def _call_gemini(self, prompt: str) -> dict[str, str]:
+    def _call_gemini(self, prompt: str) -> AgentDecision:
         url = (
             "https://generativelanguage.googleapis.com/v1beta/models/"
             f"{GEMINI_MODEL}:generateContent?key={self.api_key}"
@@ -130,8 +113,8 @@ class GeminiDecisionAgent:
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "generationConfig": {
                 "temperature": 0.2,
-                "responseMimeType": "application/json"
-            }
+                "responseMimeType": "application/json",
+            },
         }
         request = urllib.request.Request(
             url,
@@ -159,8 +142,8 @@ class GeminiDecisionAgent:
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "generationConfig": {
                 "temperature": 0.2,
-                "responseMimeType": "application/json"
-            }
+                "responseMimeType": "application/json",
+            },
         }
         request = urllib.request.Request(
             url,
@@ -179,7 +162,7 @@ class GeminiDecisionAgent:
         )
         return self._parse_reply_payload(text)
 
-    def _parse_json_payload(self, text: str) -> dict[str, str]:
+    def _parse_json_payload(self, text: str) -> AgentDecision:
         if not text:
             raise ValueError("Gemini returned an empty response")
 
@@ -191,11 +174,7 @@ class GeminiDecisionAgent:
                 raise
             parsed = json.loads(match.group(0))
 
-        return {
-            "action": str(parsed.get("action", "")).strip(),
-            "message": str(parsed.get("message", "")).strip(),
-            "category": str(parsed.get("category", "")).strip(),
-        }
+        return AgentDecision.model_validate(parsed)
 
     def _parse_reply_payload(self, text: str) -> str:
         if not text:
@@ -214,74 +193,46 @@ class GeminiDecisionAgent:
             raise ValueError("Gemini reply payload did not include a message")
         return message
 
-    def _fallback_decision(self, state: dict[str, object]) -> dict[str, str]:
-        if state["progress"]["classification"] in {"pending", "incorrect"}:
-            return {
-                "action": "classify_ticket",
-                "message": "",
-                "category": self._infer_category(state),
-            }
+    def _fallback_decision(self, state: ObservationModel) -> AgentDecision:
+        if state.progress.classification in {"pending", "incorrect"}:
+            return AgentDecision(action="classify_ticket", category=self._infer_category(state))
 
-        if state["progress"]["reply"] in {"pending", "incorrect"}:
-            return {
-                "action": "respond",
-                "message": self._fallback_reply(state),
-                "category": "",
-            }
+        if state.progress.reply in {"pending", "incorrect"}:
+            return AgentDecision(action="respond", message=self._fallback_reply(state))
 
-        if state["progress"]["escalation"] == "required":
-            return {"action": "escalate", "message": "", "category": ""}
+        if state.progress.escalation == "required":
+            return AgentDecision(action="escalate")
 
-        return {"action": "close_ticket", "message": "", "category": ""}
+        return AgentDecision(action="close_ticket")
 
-    def _fallback_reply(self, state: dict[str, object]) -> str:
-        if state.get("customer_ready_to_close") or state.get("status") == "awaiting_close":
-            return (
-                "I'm glad that helped. If everything looks good now, may I close this ticket for you?"
-            )
+    def _fallback_reply(self, state: ObservationModel) -> str:
+        if state.customer_ready_to_close or state.status == "awaiting_close":
+            return "I'm glad that helped. If everything looks good now, may I close this ticket for you?"
 
-        rules = state.get("policy_rules", [])[:2]
+        rules = state.policy_rules[:2]
         primary_rule = rules[0] if rules else ""
         secondary_rule = rules[1] if len(rules) > 1 else ""
         category = self._infer_category(state)
-        needs_escalation = state["progress"]["escalation"] == "required"
-        positive_keywords = [
-            keyword.strip() for keyword in state.get("reply_guidance", {}).get("positive_keywords", []) if keyword.strip()
-        ]
-        issue = str(state.get("ticket", {}).get("issue", "")).lower()
+        needs_escalation = state.progress.escalation == "required"
+        positive_keywords = [keyword.strip() for keyword in state.reply_guidance.positive_keywords if keyword.strip()]
 
         if category == "delivery":
-            message = (
-                "I'm sorry you're dealing with this delivery issue. "
-                "I will document the missing items, start the trace, and explain the next steps clearly. "
-            )
+            message = "I'm sorry you're dealing with this delivery issue. I will document the missing items, start the trace, and explain the next steps clearly. "
         elif category == "account":
-            message = (
-                "I'm sorry you're dealing with this account issue. "
-                "I will help you secure the account and explain the next recovery steps clearly. "
-            )
+            message = "I'm sorry you're dealing with this account issue. I will help you secure the account and explain the next recovery steps clearly. "
         elif category == "return":
-            message = (
-                "I'm sorry for the trouble with this return. "
-                "I will explain the return process and the next steps clearly. "
-            )
+            message = "I'm sorry for the trouble with this return. I will explain the return process and the next steps clearly. "
         elif category == "refund":
-            message = (
-                "I'm sorry you're dealing with this refund issue. "
-                "I will confirm whether the defective item qualifies and explain the refund steps clearly. "
-            )
+            message = "I'm sorry you're dealing with this refund issue. I will confirm whether the defective item qualifies and explain the refund steps clearly. "
         else:
-            message = (
-                "I'm sorry you're dealing with this technical issue. "
-                "I will document the problem and explain the next troubleshooting steps clearly. "
-            )
+            message = "I'm sorry you're dealing with this technical issue. I will document the problem and explain the next troubleshooting steps clearly. "
 
         if primary_rule:
             message += f"Based on our policy, {primary_rule} "
         if secondary_rule:
             message += f"{secondary_rule} "
 
-        keyword_clauses = []
+        keyword_clauses: list[str] = []
         for keyword in positive_keywords:
             lowered_keyword = keyword.lower()
             if lowered_keyword in message.lower():
@@ -340,10 +291,9 @@ class GeminiDecisionAgent:
             message += "I will keep you updated as we work through this."
         return message.strip()
 
-    def _infer_category(self, state: dict[str, object]) -> str:
-        ticket = state["ticket"]
-        issue = str(ticket.get("issue", "")).lower()
-        rules_text = " ".join(str(rule).lower() for rule in state.get("policy_rules", []))
+    def _infer_category(self, state: ObservationModel) -> str:
+        issue = state.ticket.issue.lower() if state.ticket else ""
+        rules_text = " ".join(rule.lower() for rule in state.policy_rules)
         combined_text = f"{issue} {rules_text}"
 
         if any(hint in combined_text for hint in ACCOUNT_HINTS):

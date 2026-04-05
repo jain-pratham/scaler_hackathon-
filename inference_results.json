@@ -1,0 +1,30 @@
+{
+  "seed": 7,
+  "average_score": 0.9999,
+  "episodes": [
+    {
+      "difficulty": "easy",
+      "ticket_id": "TKT-E-1001",
+      "reward_score": 0.9999,
+      "steps_taken": 3,
+      "done": true,
+      "status": "closed"
+    },
+    {
+      "difficulty": "medium",
+      "ticket_id": "TKT-M-2001",
+      "reward_score": 0.9999,
+      "steps_taken": 3,
+      "done": true,
+      "status": "closed"
+    },
+    {
+      "difficulty": "hard",
+      "ticket_id": "TKT-H-3001",
+      "reward_score": 1.0,
+      "steps_taken": 4,
+      "done": true,
+      "status": "closed"
+    }
+  ]
+}

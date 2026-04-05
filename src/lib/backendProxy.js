@@ -10,14 +10,18 @@ export async function proxyToBackend({
   let response;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), BACKEND_TIMEOUT_MS);
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+
+  if (sessionId) {
+    headers['X-Session-Id'] = sessionId;
+  }
 
   try {
     response = await fetch(`${BACKEND_URL}${path}`, {
       method,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Session-Id': sessionId,
-      },
+      headers,
       cache: 'no-store',
       signal: controller.signal,
       body: body ? JSON.stringify(body) : undefined,

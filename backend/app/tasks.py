@@ -1,58 +1,75 @@
 ﻿from __future__ import annotations
 
-import copy
-import json
 from pathlib import Path
-from typing import Any, Union
+
+from .models import CatalogTicket, DifficultyLevel, Task, TaskBundle, TaskCache
 
 
-DIFFICULTIES = ("easy", "medium", "hard")
+DIFFICULTIES: tuple[DifficultyLevel, ...] = ("easy", "medium", "hard")
 
 
 class TaskRepository:
-    def __init__(self, base_path: Union[str, Path]) -> None:
+    def __init__(self, base_path: str | Path) -> None:
         self.base_path = Path(base_path)
-        self._cache: dict[str, dict[str, Any]] = {}
+        self._cache = TaskCache()
 
-    def _load_bundle(self, difficulty: str) -> dict[str, Any]:
+    def _get_cached_bundle(self, difficulty: DifficultyLevel) -> TaskBundle | None:
+        if difficulty == "easy":
+            return self._cache.easy
+        if difficulty == "medium":
+            return self._cache.medium
+        return self._cache.hard
+
+    def _set_cached_bundle(self, difficulty: DifficultyLevel, bundle: TaskBundle) -> None:
+        if difficulty == "easy":
+            self._cache.easy = bundle
+        elif difficulty == "medium":
+            self._cache.medium = bundle
+        else:
+            self._cache.hard = bundle
+
+    def _load_bundle(self, difficulty: DifficultyLevel) -> TaskBundle:
         if difficulty not in DIFFICULTIES:
             raise ValueError(f"Unsupported difficulty: {difficulty}")
 
-        if difficulty not in self._cache:
-            bundle_path = self.base_path / f"{difficulty}.json"
-            with bundle_path.open("r", encoding="utf-8") as handle:
-                self._cache[difficulty] = json.load(handle)
-        return self._cache[difficulty]
+        cached_bundle = self._get_cached_bundle(difficulty)
+        if cached_bundle is not None:
+            return cached_bundle
 
-    def list_tasks(self, difficulty: str) -> list[dict[str, Any]]:
-        return copy.deepcopy(self._load_bundle(difficulty)["tasks"])
+        bundle_path = self.base_path / f"{difficulty}.json"
+        bundle = TaskBundle.model_validate_json(bundle_path.read_text(encoding="utf-8"))
+        self._set_cached_bundle(difficulty, bundle)
+        return bundle
 
-    def get_task(self, difficulty: str, ticket_id: str) -> dict[str, Any]:
-        for task in self._load_bundle(difficulty)["tasks"]:
-            if task["ticket"]["id"] == ticket_id or task["ticket_id"] == ticket_id:
-                return copy.deepcopy(task)
+    def list_tasks(self, difficulty: DifficultyLevel) -> list[Task]:
+        bundle = self._load_bundle(difficulty)
+        return [task.model_copy(deep=True) for task in bundle.tasks]
+
+    def get_task(self, difficulty: DifficultyLevel, ticket_id: str) -> Task:
+        for task in self._load_bundle(difficulty).tasks:
+            if task.ticket.id == ticket_id or task.ticket_id == ticket_id:
+                return task.model_copy(deep=True)
         raise KeyError(f"Ticket {ticket_id} not found for difficulty {difficulty}")
 
-    def get_task_by_index(self, difficulty: str, index: int) -> dict[str, Any]:
-        tasks = self._load_bundle(difficulty)["tasks"]
-        return copy.deepcopy(tasks[index % len(tasks)])
+    def get_task_by_index(self, difficulty: DifficultyLevel, index: int) -> Task:
+        tasks = self._load_bundle(difficulty).tasks
+        return tasks[index % len(tasks)].model_copy(deep=True)
 
-    def get_summary_catalog(self) -> list[dict[str, Any]]:
-        catalog: list[dict[str, Any]] = []
+    def get_summary_catalog(self) -> list[CatalogTicket]:
+        catalog: list[CatalogTicket] = []
         for difficulty in DIFFICULTIES:
-            for task in self._load_bundle(difficulty)["tasks"]:
-                ticket = task["ticket"]
+            for task in self._load_bundle(difficulty).tasks:
                 catalog.append(
-                    {
-                        "id": ticket["id"],
-                        "category": task["display_category"],
-                        "customer": ticket["customer"],
-                        "issue": ticket["issue"],
-                        "difficulty": difficulty,
-                        "status": "open",
-                        "orderId": ticket["order_id"],
-                        "product": ticket["product"],
-                        "orderDateText": ticket["order_date_text"],
-                    }
+                    CatalogTicket(
+                        id=task.ticket.id,
+                        category=task.display_category,
+                        customer=task.ticket.customer,
+                        issue=task.ticket.issue,
+                        difficulty=difficulty,
+                        status="open",
+                        orderId=task.ticket.order_id,
+                        product=task.ticket.product,
+                        orderDateText=task.ticket.order_date_text,
+                    )
                 )
         return catalog

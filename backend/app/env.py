@@ -1,22 +1,32 @@
 ﻿from __future__ import annotations
 
-import copy
 import random
-from typing import Any, Optional
 
 from .agent import GeminiDecisionAgent
 from .grader import SupportTicketGrader
+from .models import (
+    Action,
+    AutoAgentResponse,
+    AutoAgentTrajectoryStep,
+    ConversationEntry,
+    DifficultyLevel,
+    DraftReplyResponse,
+    EpisodeMetrics,
+    Observation,
+    Progress,
+    Session,
+    SessionRegistry,
+    State,
+    StepInfo,
+    StepResponse,
+    Task,
+    TicketState,
+)
 from .simulator import CustomerSimulator
 from .tasks import TaskRepository
 
 
-SUPPORTED_ACTIONS = {
-    "classify_ticket",
-    "respond",
-    "escalate",
-    "close_ticket",
-}
-
+SUPPORTED_ACTIONS = ["classify_ticket", "respond", "escalate", "close_ticket"]
 CATEGORY_LABELS = {
     "refund": "Refund Request",
     "return": "Return Request",
@@ -27,8 +37,8 @@ CATEGORY_LABELS = {
 }
 
 
-def clamp(value: float, minimum: float, maximum: float) -> float:
-    return max(minimum, min(maximum, value))
+def clamp_score(value: float) -> float:
+    return max(0.0, min(1.0, round(value, 4)))
 
 
 class CustomerSupportEnv:
@@ -45,307 +55,250 @@ class CustomerSupportEnv:
         self.simulator = simulator
         self.agent = agent
         self.seed = seed
-        self.sessions: dict[str, dict[str, Any]] = {}
+        self.sessions = SessionRegistry()
 
     def reset(
         self,
         session_id: str,
-        difficulty: str,
-        ticket_id: Optional[str] = None,
-    ) -> dict[str, Any]:
-        session = self.sessions.setdefault(
-            session_id,
-            {"rng": random.Random(f"{self.seed}:{session_id}")},
+        difficulty: DifficultyLevel,
+        ticket_id: str | None = None,
+    ) -> Observation:
+        existing_session = self.sessions.find(session_id)
+        rng = existing_session.rng if existing_session is not None else random.Random(f"{self.seed}:{session_id}")
+        task = (
+            self.repository.get_task(difficulty, ticket_id)
+            if ticket_id
+            else self.repository.get_task_by_index(difficulty, rng.randrange(len(self.repository.list_tasks(difficulty))))
         )
-        rng = session["rng"]
+        state = self._build_initial_state(task, difficulty)
+        self.sessions.upsert(Session(session_id=session_id, rng=rng, task=task, state=state))
+        return self._public_state(state)
 
-        if ticket_id:
-            task = self.repository.get_task(difficulty, ticket_id)
-        else:
-            index = rng.randrange(len(self.repository.list_tasks(difficulty)))
-            task = self.repository.get_task_by_index(difficulty, index)
+    def state(self, session_id: str) -> Observation:
+        session = self.sessions.find(session_id)
+        if session is None:
+            return Observation(
+                status="idle",
+                done=False,
+                reward_score=0.0,
+                available_categories=list(CATEGORY_LABELS.keys()),
+                available_actions=SUPPORTED_ACTIONS,
+            )
+        return self._public_state(session.state)
 
-        ticket = {
-            "id": task["ticket"]["id"],
-            "customer": task["ticket"]["customer"],
-            "issue": task["ticket"]["issue"],
-            "orderId": task["ticket"]["order_id"],
-            "product": task["ticket"]["product"],
-            "orderDateText": task["ticket"]["order_date_text"],
-            "category": "Pending classification",
-            "status": "open",
-            "difficulty": difficulty,
-        }
-
-        state = {
-            "difficulty": difficulty,
-            "task": task,
-            "ticket": ticket,
-            "status": "open",
-            "done": False,
-            "steps_taken": 0,
-            "max_steps": task.get("max_steps", 6),
-            "current_stage": 0,
-            "last_reward": 0.0,
-            "reward_score": 0.5,
-            "cumulative_reward": 0.0,
-            "customer_ready_to_close": False,
-            "available_categories": list(CATEGORY_LABELS.keys()),
-            "available_actions": ["classify_ticket", "respond", "escalate", "close_ticket"],
-            "progress": {
-                "classification": "pending",
-                "reply": "pending",
-                "escalation": "required"
-                if task["resolution"].get("needs_escalation")
-                else "not_needed",
-            },
-            "policy_rules": task.get("policy_rules", []),
-            "reply_guidance": task.get("reply_guidance", {}),
-            "conversation_history": [
-                {
-                    "role": "system",
-                    "message": "Ticket loaded. Review the policy panel before acting.",
-                },
-                {
-                    "role": "customer",
-                    "message": task["ticket"]["issue"],
-                },
-            ],
-            "episode_metrics": {
-                "actions_taken": [],
-                "classification_correct": False,
-                "reply_helpful": False,
-                "escalation_correct": False,
-                "closed_correctly": False,
-            },
-            "info_messages": [],
-        }
-
-        self.sessions[session_id] = {"rng": rng, "state": state}
-        return self._serialize_state(state)
-
-    def state(self, session_id: str) -> dict[str, Any]:
-        session = self.sessions.get(session_id)
-        if not session or "state" not in session:
-            return {
-                "status": "idle",
-                "done": False,
-                "reward_score": 0.5,
-                "conversation_history": [],
-                "progress": {
-                    "classification": "pending",
-                    "reply": "pending",
-                    "escalation": "not_needed",
-                },
-            }
-        return self._serialize_state(session["state"])
-
-    def step(
-        self,
-        session_id: str,
-        action: str,
-        message: Optional[str] = None,
-        category: Optional[str] = None,
-    ) -> dict[str, Any]:
-        if action not in SUPPORTED_ACTIONS:
-            raise ValueError(f"Unsupported action: {action}")
-
-        state = self._get_live_state(session_id)
-        task = state["task"]
+    def step(self, session_id: str, action: Action) -> StepResponse:
+        session = self._get_session(session_id)
+        state = session.state
+        task = session.task
         feedback: list[str] = []
 
-        if state["done"]:
-            serialized = self._serialize_state(state)
-            return {
-                "observation": serialized,
-                "reward": 0.0,
-                "done": True,
-                "info": {"message": "Episode already completed.", "state": serialized},
-            }
+        if state.done:
+            observation = self._public_state(state)
+            return StepResponse(
+                observation=observation,
+                reward=0.0,
+                done=True,
+                info=StepInfo(messages=["Episode already completed."], state=observation),
+            )
 
-        if state["steps_taken"] >= state["max_steps"]:
-            state["done"] = True
-            state["status"] = "max_steps_reached"
-            state["ticket"]["status"] = state["status"]
-            serialized = self._serialize_state(state)
-            return {
-                "observation": serialized,
-                "reward": -0.2,
-                "done": True,
-                "info": {
-                    "message": "Maximum step count reached.",
-                    "state": serialized,
-                },
-            }
+        if state.steps_taken >= state.max_steps:
+            state.done = True
+            state.status = "max_steps_reached"
+            if state.ticket is not None:
+                state.ticket.status = state.status
+            observation = self._public_state(state)
+            return StepResponse(
+                observation=observation,
+                reward=0.0,
+                done=True,
+                info=StepInfo(messages=["Maximum step count reached."], state=observation),
+            )
 
         reward = 0.0
-        state["steps_taken"] += 1
-        state["episode_metrics"]["actions_taken"].append(action)
+        state.steps_taken += 1
+        state.episode_metrics.actions_taken.append(action.action)
 
-        if action == "classify_ticket":
-            reward, is_correct = self.grader.evaluate_classification(task, category)
-            normalized_category = (category or "").strip().lower() or "other"
-            state["ticket"]["category"] = CATEGORY_LABELS.get(normalized_category, normalized_category.title())
-            state["progress"]["classification"] = "correct" if is_correct else "incorrect"
-            state["episode_metrics"]["classification_correct"] = is_correct
+        if action.action == "classify_ticket":
+            reward, is_correct = self.grader.evaluate_classification(task, action.category)
+            normalized_category = (action.category or "").strip().lower() or "other"
+            if state.ticket is not None:
+                state.ticket.category = CATEGORY_LABELS.get(normalized_category, normalized_category.title())
+            state.progress.classification = "correct" if is_correct else "incorrect"
+            state.episode_metrics.classification_correct = is_correct
             feedback.append(
                 "Classification matched the expected category."
                 if is_correct
-                else f"Expected category was {task['display_category']}."
+                else f"Expected category was {task.display_category}."
             )
-            state["status"] = "classified"
-            state["current_stage"] = max(state["current_stage"], 1)
+            state.status = "classified"
+            state.current_stage = max(state.current_stage, 1)
 
-        elif action == "respond":
-            reward, helpful, response_feedback = self.grader.evaluate_response(task, state, message)
-            state["conversation_history"].append(
-                {"role": "agent", "message": (message or "").strip()}
-            )
+        elif action.action == "respond":
+            reward, helpful, response_feedback = self.grader.evaluate_response(task, state, action.message)
+            state.conversation_history.append(ConversationEntry(role="agent", message=(action.message or "").strip()))
             feedback.extend(response_feedback or ["Response recorded."])
-            state["progress"]["reply"] = "completed" if helpful else "incorrect"
-            state["episode_metrics"]["reply_helpful"] = helpful
-            already_replied = state["customer_ready_to_close"]
+            state.progress.reply = "completed" if helpful else "incorrect"
+            state.episode_metrics.reply_helpful = helpful
             customer_message = self.simulator.next_customer_message(
-                task,
+                task=task,
                 action="respond",
                 helpful=helpful,
-                already_replied=already_replied,
+                already_replied=state.customer_ready_to_close,
             )
-            if customer_message:
-                state["conversation_history"].append(
-                    {"role": "customer", "message": customer_message}
-                )
+            if customer_message is not None:
+                state.conversation_history.append(ConversationEntry(role="customer", message=customer_message))
 
-            state["customer_ready_to_close"] = bool(helpful) and (
-                task["resolution"].get("can_close_after_response")
-                or not task["resolution"].get("needs_escalation")
+            state.customer_ready_to_close = (
+                bool(helpful)
+                and (not task.resolution.needs_escalation)
+                and task.resolution.can_close_after_response
             )
-            if task["resolution"].get("needs_escalation"):
-                state["status"] = "needs_escalation"
-                state["progress"]["escalation"] = "required"
+            if task.resolution.needs_escalation:
+                state.status = "needs_escalation"
+                state.progress.escalation = "required"
             elif helpful:
-                state["status"] = "awaiting_close"
+                state.status = "awaiting_close"
             else:
-                state["status"] = "customer_waiting"
-            state["current_stage"] = max(state["current_stage"], 2)
+                state.status = "customer_waiting"
+            state.current_stage = max(state.current_stage, 2)
 
-        elif action == "escalate":
+        elif action.action == "escalate":
             reward, correct, escalation_feedback = self.grader.evaluate_escalation(task, state)
-            state["progress"]["escalation"] = "completed" if correct else "unnecessary"
-            state["episode_metrics"]["escalation_correct"] = correct
+            state.progress.escalation = "completed" if correct else "unnecessary"
+            state.episode_metrics.escalation_correct = correct
             feedback.append(escalation_feedback)
             customer_message = self.simulator.next_customer_message(
-                task,
+                task=task,
                 action="escalate",
                 helpful=correct,
                 already_replied=False,
             )
-            if customer_message:
-                state["conversation_history"].append(
-                    {"role": "customer", "message": customer_message}
-                )
-            state["status"] = "escalated" if correct else "in_progress"
-            state["customer_ready_to_close"] = correct
-            state["current_stage"] = max(state["current_stage"], 3)
+            if customer_message is not None:
+                state.conversation_history.append(ConversationEntry(role="customer", message=customer_message))
+            state.status = "escalated" if correct else "in_progress"
+            state.customer_ready_to_close = correct
+            state.current_stage = max(state.current_stage, 3)
 
-        elif action == "close_ticket":
+        else:
             reward, closed_correctly, close_feedback = self.grader.evaluate_closure(task, state)
             feedback.extend(close_feedback)
-            state["episode_metrics"]["closed_correctly"] = closed_correctly
+            state.episode_metrics.closed_correctly = closed_correctly
             if closed_correctly:
-                state["done"] = True
-                state["status"] = "closed"
-                state["ticket"]["status"] = "closed"
-                state["current_stage"] = 3
-                state["conversation_history"].append(
-                    {
-                        "role": "system",
-                        "message": "Ticket closed successfully.",
-                    }
+                state.done = True
+                state.status = "closed"
+                if state.ticket is not None:
+                    state.ticket.status = "closed"
+                state.current_stage = 3
+                state.conversation_history.append(
+                    ConversationEntry(role="system", message="Ticket closed successfully.")
                 )
             else:
-                state["status"] = "reopened"
+                state.status = "reopened"
                 customer_message = self.simulator.next_customer_message(
-                    task,
+                    task=task,
                     action="close_ticket",
                     helpful=False,
                     already_replied=False,
                 )
-                if customer_message:
-                    state["conversation_history"].append(
-                        {"role": "customer", "message": customer_message}
-                    )
+                if customer_message is not None:
+                    state.conversation_history.append(ConversationEntry(role="customer", message=customer_message))
 
-        state["last_reward"] = reward
-        state["cumulative_reward"] = clamp(state["cumulative_reward"] + reward, -1.0, 1.0)
-        state["reward_score"] = round(clamp(0.5 + (state["cumulative_reward"] / 2.0), 0.0, 1.0), 2)
-        state["ticket"]["status"] = state["status"]
-        state["info_messages"] = feedback
+        state.last_reward = clamp_score(reward)
+        state.cumulative_reward = clamp_score(
+            state.cumulative_reward + (state.last_reward / max(state.max_possible_reward, 1.0))
+        )
+        state.reward_score = state.cumulative_reward
+        if state.ticket is not None:
+            state.ticket.status = state.status
+        state.info_messages = feedback
 
-        if state["steps_taken"] >= state["max_steps"] and not state["done"]:
-            state["done"] = True
-            state["status"] = "max_steps_reached"
-            state["ticket"]["status"] = state["status"]
+        if state.steps_taken >= state.max_steps and not state.done:
+            state.done = True
+            state.status = "max_steps_reached"
+            if state.ticket is not None:
+                state.ticket.status = state.status
             feedback.append("Maximum step count reached before resolution.")
 
-        serialized = self._serialize_state(state)
-        return {
-            "observation": serialized,
-            "reward": reward,
-            "done": state["done"],
-            "info": {
-                "messages": feedback,
-                "state": serialized,
-            },
-        }
+        observation = self._public_state(state)
+        return StepResponse(
+            observation=observation,
+            reward=state.last_reward,
+            done=state.done,
+            info=StepInfo(messages=feedback, state=observation),
+        )
 
-    def run_auto_agent(self, session_id: str, max_turns: int = 8) -> dict[str, Any]:
-        state = self._get_live_state(session_id)
-        trajectory: list[dict[str, Any]] = []
+    def run_auto_agent(self, session_id: str, max_turns: int = 8) -> AutoAgentResponse:
+        session = self._get_session(session_id)
+        trajectory: list[AutoAgentTrajectoryStep] = []
 
         for _ in range(max_turns):
-            if state["done"]:
+            if session.state.done:
                 break
 
-            decision = self.agent.decide(self._serialize_state(state))
-            action = decision.get("action") or "close_ticket"
-            result = self.step(
-                session_id,
-                action=action,
-                message=decision.get("message"),
-                category=decision.get("category"),
-            )
+            decision = self.agent.decide(self._public_state(session.state))
+            result = self.step(session_id, Action.model_validate(decision.model_dump()))
             trajectory.append(
-                {
-                    "decision": decision,
-                    "reward": result["reward"],
-                    "done": result["done"],
-                }
+                AutoAgentTrajectoryStep(decision=decision, reward=result.reward, done=result.done)
             )
-            state = self._get_live_state(session_id)
-            if result["done"]:
+            session = self._get_session(session_id)
+            if result.done:
                 break
 
-        return {
-            "state": self._serialize_state(state),
-            "done": state["done"],
-            "trajectory": trajectory,
-        }
+        return AutoAgentResponse(
+            state=self._public_state(session.state),
+            done=session.state.done,
+            trajectory=trajectory,
+        )
 
-    def generate_reply_draft(self, session_id: str) -> dict[str, Any]:
-        state = self._get_live_state(session_id)
-        return {
-            "message": self.agent.generate_reply(self._serialize_state(state)),
-            "state": self._serialize_state(state),
-        }
+    def generate_reply_draft(self, session_id: str) -> DraftReplyResponse:
+        session = self._get_session(session_id)
+        observation = self._public_state(session.state)
+        return DraftReplyResponse(message=self.agent.generate_reply(observation), state=observation)
 
-    def _get_live_state(self, session_id: str) -> dict[str, Any]:
-        session = self.sessions.get(session_id)
-        if not session or "state" not in session:
+    def _get_session(self, session_id: str) -> Session:
+        session = self.sessions.find(session_id)
+        if session is None:
             raise KeyError("No active ticket for this session. Call reset first.")
-        return session["state"]
+        return session
 
-    def _serialize_state(self, state: dict[str, Any]) -> dict[str, Any]:
-        public_state = copy.deepcopy(state)
-        public_state.pop("task", None)
-        return public_state
+    def _build_initial_state(self, task: Task, difficulty: DifficultyLevel) -> State:
+        escalation_status = "required" if task.resolution.needs_escalation else "not_needed"
+        ticket = TicketState(
+            id=task.ticket.id,
+            customer=task.ticket.customer,
+            issue=task.ticket.issue,
+            orderId=task.ticket.order_id,
+            product=task.ticket.product,
+            orderDateText=task.ticket.order_date_text,
+            category="Pending classification",
+            status="open",
+            difficulty=difficulty,
+        )
+        return State(
+            difficulty=difficulty,
+            ticket=ticket,
+            status="open",
+            done=False,
+            steps_taken=0,
+            max_steps=task.max_steps,
+            max_possible_reward=float(len(task.expected_flow)),
+            current_stage=0,
+            last_reward=0.0,
+            reward_score=0.0,
+            cumulative_reward=0.0,
+            customer_ready_to_close=False,
+            available_categories=list(CATEGORY_LABELS.keys()),
+            available_actions=SUPPORTED_ACTIONS,
+            progress=Progress(classification="pending", reply="pending", escalation=escalation_status),
+            policy_rules=task.policy_rules,
+            reply_guidance=task.reply_guidance.model_copy(deep=True),
+            conversation_history=[
+                ConversationEntry(role="system", message="Ticket loaded. Review the policy panel before acting."),
+                ConversationEntry(role="customer", message=task.ticket.issue),
+            ],
+            episode_metrics=EpisodeMetrics(),
+            info_messages=[],
+        )
+
+    def _public_state(self, state: State) -> Observation:
+        return Observation.model_validate(state.model_dump())
