@@ -7,7 +7,15 @@ export const dynamic = 'force-dynamic';
 export async function POST(request) {
   try {
     const sessionId = request.headers.get('x-session-id');
-    const body = await request.json().catch(() => ({}));
+    let body = {};
+    try {
+      const text = await request.text();
+      if (text) {
+        body = JSON.parse(text);
+      }
+    } catch (e) {
+      // Ignore invalid JSON format
+    }
 
     const payload = await proxyToBackend({
       path: '/agent/auto',
