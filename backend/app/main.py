@@ -67,14 +67,13 @@ def reset(
     x_session_id: Optional[str] = Header(default=None),
 ) -> ResetResponse:
     session_id = resolve_session_id(x_session_id)
+    request_payload = payload if payload is not None else ResetRequest()
 
     try:
-        difficulty = payload.difficulty if payload else "easy"
-        ticket_id = payload.ticket_id if payload else None
         state = environment.reset(
             session_id=session_id,
-            difficulty=difficulty,
-            ticket_id=ticket_id,
+            difficulty=request_payload.difficulty,
+            ticket_id=request_payload.ticket_id,
         )
     except KeyError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
@@ -84,9 +83,6 @@ def reset(
         raise
     except Exception as error:
         raise HTTPException(status_code=500, detail="Failed to reset environment.") from error
-
-    if state.ticket is None:
-        raise HTTPException(status_code=500, detail="Reset did not produce a ticket state.")
 
     return ResetResponse(ticket=state.ticket, state=state)
 

@@ -291,7 +291,7 @@ class GeminiDecisionAgent:
         return message.strip()
 
     def _infer_category(self, state: ObservationModel) -> str:
-        issue = state.ticket.issue.lower() if state.ticket else ""
+        issue = state.ticket.issue.lower()
         rules_text = " ".join(rule.lower() for rule in state.policy_rules)
         combined_text = f"{issue} {rules_text}"
 

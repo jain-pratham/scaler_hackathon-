@@ -111,6 +111,20 @@ class TicketState(BaseModel):
     difficulty: DifficultyLevel
 
 
+def build_default_ticket_state() -> TicketState:
+    return TicketState(
+        id="",
+        customer="",
+        issue="",
+        orderId="",
+        product="",
+        orderDateText="",
+        category="Pending classification",
+        status="idle",
+        difficulty="easy",
+    )
+
+
 class ConversationEntry(BaseModel):
     role: ConversationRole
     message: str
@@ -131,8 +145,8 @@ class EpisodeMetrics(BaseModel):
 
 
 class State(BaseModel):
-    difficulty: Optional[DifficultyLevel] = None
-    ticket: Optional[TicketState] = None
+    difficulty: DifficultyLevel = "easy"
+    ticket: TicketState = Field(default_factory=build_default_ticket_state)
     status: str = "idle"
     done: bool = False
     steps_taken: int = 0
@@ -166,7 +180,7 @@ class Action(BaseModel):
 class ResetRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    difficulty: DifficultyLevel
+    difficulty: DifficultyLevel = "easy"
     ticket_id: Optional[str] = Field(default=None, alias="ticketId")
 
 

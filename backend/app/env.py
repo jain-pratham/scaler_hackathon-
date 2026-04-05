@@ -109,8 +109,7 @@ class CustomerSupportEnv:
         if state.steps_taken >= state.max_steps:
             state.done = True
             state.status = "max_steps_reached"
-            if state.ticket is not None:
-                state.ticket.status = state.status
+            state.ticket.status = state.status
             observation = self._public_state(state)
             return StepResponse(
                 observation=observation,
@@ -126,8 +125,7 @@ class CustomerSupportEnv:
         if action.action == "classify_ticket":
             reward, is_correct = self.grader.evaluate_classification(task, action.category)
             normalized_category = (action.category or "").strip().lower() or "other"
-            if state.ticket is not None:
-                state.ticket.category = CATEGORY_CATALOG.label_for(normalized_category)
+            state.ticket.category = CATEGORY_CATALOG.label_for(normalized_category)
             state.progress.classification = "correct" if is_correct else "incorrect"
             state.episode_metrics.classification_correct = is_correct
             feedback.append(
@@ -191,8 +189,7 @@ class CustomerSupportEnv:
             if closed_correctly:
                 state.done = True
                 state.status = "closed"
-                if state.ticket is not None:
-                    state.ticket.status = "closed"
+                state.ticket.status = "closed"
                 state.current_stage = 3
                 state.conversation_history.append(
                     ConversationEntry(role="system", message="Ticket closed successfully.")
@@ -213,15 +210,13 @@ class CustomerSupportEnv:
             state.cumulative_reward + (state.last_reward / max(state.max_possible_reward, 1.0))
         )
         state.reward_score = state.cumulative_reward
-        if state.ticket is not None:
-            state.ticket.status = state.status
+        state.ticket.status = state.status
         state.info_messages = feedback
 
         if state.steps_taken >= state.max_steps and not state.done:
             state.done = True
             state.status = "max_steps_reached"
-            if state.ticket is not None:
-                state.ticket.status = state.status
+            state.ticket.status = state.status
             feedback.append("Maximum step count reached before resolution.")
 
         observation = self._public_state(state)
