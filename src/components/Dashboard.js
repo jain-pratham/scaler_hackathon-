@@ -148,7 +148,7 @@ export default function Dashboard({ initialTickets = [] }) {
       completedKeyRef.current = null;
 
       try {
-        const response = await fetchWithTimeout('http://0.0.0.0:8001/reset', {
+        const response = await fetchWithTimeout('/reset', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -215,7 +215,7 @@ export default function Dashboard({ initialTickets = [] }) {
     setErrorMessage('');
 
     try {
-      const response = await fetchWithTimeout('http://0.0.0.0:8001/step', {
+      const response = await fetchWithTimeout('/step', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -246,7 +246,7 @@ export default function Dashboard({ initialTickets = [] }) {
     setErrorMessage('');
 
     try {
-      const response = await fetchWithTimeout('http://0.0.0.0:8001/auto-agent', {
+      const response = await fetchWithTimeout('/auto-agent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -277,7 +277,7 @@ export default function Dashboard({ initialTickets = [] }) {
     setErrorMessage('');
 
     try {
-      const response = await fetchWithTimeout('http://0.0.0.0:8001/draft-reply', {
+      const response = await fetchWithTimeout('/draft-reply', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
