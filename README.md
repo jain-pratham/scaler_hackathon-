@@ -2,25 +2,15 @@
 
 ## Environment Description
 
-This project implements an OpenEnv-compatible customer support environment for resolving real-world ecommerce and SaaS support tickets. Agents must classify incoming tickets, send policy-compliant customer replies, escalate when required, and close tickets only when the issue is properly resolved.
+This project implements an OpenEnv-compatible customer support environment for realistic ecommerce and SaaS support tickets. An agent must classify the issue, send a policy-aware customer response, escalate when the workflow requires it, and close the ticket only when the case is resolved correctly.
 
-The app includes:
+The environment is served by a FastAPI application and exposes deterministic task loading, grading, simulation, and state transitions.
 
-- A Next.js App Router dashboard for human interaction and public route-handler APIs.
-- A FastAPI backend that owns environment state, task loading, grading, simulation, and deterministic agent execution.
-- Three difficulty tiers with policy-sensitive workflows:
-  - `easy`
-  - `medium`
-  - `hard`
+Difficulty tiers:
 
-The public OpenEnv endpoints are:
-
-- `POST /reset`
-- `POST /step`
-- `GET /state`
-- `POST /agent/auto`
-
-These routes proxy to the backend service and are available from the single-container deployment.
+- `easy`
+- `medium`
+- `hard`
 
 ## Action Space
 
@@ -45,16 +35,6 @@ Rules:
   - No extra fields required
 - `close_ticket`
   - No extra fields required
-
-Example:
-
-```json
-{
-  "action": "respond",
-  "message": "I am sorry this happened. I have documented the issue and outlined the next steps.",
-  "category": null
-}
-```
 
 ## Observation Space
 
@@ -136,22 +116,9 @@ Per-action grading:
   - correct but late: `0.8`
   - incorrect: `0.0`
 
-Episode score:
-
-- `cumulative_reward` is a normalized running score in the range `0.0` to `1.0`
-- `reward_score` is updated as:
-
-```text
-reward_score = cumulative_reward + (last_reward / max_possible_reward)
-```
-
-after clamping to `0.0` to `1.0`.
-
-This preserves partial-progress feedback and keeps every reward output inside the required `0.0` to `1.0` range.
+Episode score stays clamped to `0.0` to `1.0` while preserving partial scoring.
 
 ## Setup Instructions
-
-### Environment variables
 
 Create `.env.local` from `.env.example`.
 
@@ -164,20 +131,6 @@ GEMINI_API_KEY=
 OPENENV_RANDOM_SEED=7
 ```
 
-Notes:
-
-- `API_BASE_URL`, `MODEL_NAME`, and `HF_TOKEN` are used by `inference.py` through the OpenAI-compatible client.
-- `GEMINI_API_KEY` remains supported for the dashboard auto-agent and draft-reply backend.
-- `PYTHON_BACKEND_URL` is used by the Next.js route handlers to reach the local FastAPI backend.
-
-### Dependencies
-
-Install JavaScript dependencies:
-
-```bash
-npm install
-```
-
 Install Python dependencies:
 
 ```bash
@@ -186,45 +139,16 @@ python -m pip install -r requirements.txt
 
 ## Running Locally
 
-Start the FastAPI backend:
+Start the FastAPI API on port `8000`:
 
 ```bash
-npm run dev:backend
+python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Start the Next.js UI:
+Health check:
 
 ```bash
-npm run dev:ui
-```
-
-Open:
-
-- UI: `http://127.0.0.1:3000`
-- Backend health: `http://127.0.0.1:8000/health`
-
-### OpenEnv API examples
-
-Reset:
-
-```bash
-curl -X POST http://127.0.0.1:3000/reset ^
-  -H "Content-Type: application/json" ^
-  -d "{\"difficulty\":\"easy\",\"ticketId\":\"TKT-E-1001\"}"
-```
-
-Step:
-
-```bash
-curl -X POST http://127.0.0.1:3000/step ^
-  -H "Content-Type: application/json" ^
-  -d "{\"action\":\"classify_ticket\",\"category\":\"refund\"}"
-```
-
-State:
-
-```bash
-curl http://127.0.0.1:3000/state
+curl http://127.0.0.1:8000/health
 ```
 
 ## Running Inference
@@ -235,20 +159,56 @@ Run the deterministic baseline inference script:
 python inference.py
 ```
 
-Runtime behavior:
-
-- Uses `API_BASE_URL`, `MODEL_NAME`, and `HF_TOKEN` with the OpenAI client when configured.
-- Falls back to a deterministic local policy if the remote model is unavailable.
-- Prints logs in strict format:
+The script imports the OpenAI client, reads `API_BASE_URL`, `MODEL_NAME`, and `HF_TOKEN`, makes no real API calls, and prints:
 
 ```text
 [START]
 [STEP] step=1, action=classify_ticket
 [STEP] step=2, action=respond
+[STEP] step=3, action=escalate
 [END]
 ```
 
-Scores are written to `inference_results.json`.
+## API Endpoints
+
+- `GET /health`
+- `GET /catalog`
+- `GET /reset`
+- `POST /reset`
+- `POST /step`
+- `GET /state`
+- `POST /agent/auto`
+- `POST /agent/draft-reply`
+
+Examples:
+
+Reset without a request body:
+
+```bash
+curl http://127.0.0.1:8000/reset
+```
+
+Reset with a request body:
+
+```bash
+curl -X POST http://127.0.0.1:8000/reset ^
+  -H "Content-Type: application/json" ^
+  -d "{\"difficulty\":\"easy\",\"ticketId\":\"TKT-E-1001\"}"
+```
+
+Step:
+
+```bash
+curl -X POST http://127.0.0.1:8000/step ^
+  -H "Content-Type: application/json" ^
+  -d "{\"action\":\"classify_ticket\",\"category\":\"refund\"}"
+```
+
+State:
+
+```bash
+curl http://127.0.0.1:8000/state
+```
 
 ## Docker
 
@@ -258,38 +218,11 @@ Build the single-container image:
 docker build -t openenv-customer-support .
 ```
 
-Run it:
+Run it on port `8000`:
 
 ```bash
-docker run --rm -p 7860:7860 --env-file .env.local openenv-customer-support
+docker run --rm -p 8000:8000 --env-file .env.local openenv-customer-support
 ```
-
-The single container starts:
-
-- FastAPI on `127.0.0.1:8000` inside the container
-- Next.js on the public port `7860`
-
-## Hugging Face Spaces
-
-This repository is configured for a single-container Docker deployment.
-
-Recommended Space settings:
-
-- SDK: `Docker`
-- App port: `7860`
-- Required variables:
-  - `API_BASE_URL`
-  - `MODEL_NAME`
-  - `HF_TOKEN`
-  - `GEMINI_API_KEY`
-  - `OPENENV_RANDOM_SEED`
-
-The public OpenEnv-compatible paths exposed by the Space are:
-
-- `/reset`
-- `/step`
-- `/state`
-- `/agent/auto`
 
 ## Project Structure
 
@@ -299,12 +232,9 @@ backend/app/env.py         Environment implementation
 backend/app/grader.py      Deterministic grading
 backend/app/tasks.py       Task repository
 backend/app/simulator.py   Customer simulation
-backend/app/agent.py       Gemini-backed / fallback agent
-src/app/reset/route.js     Public reset endpoint
-src/app/step/route.js      Public step endpoint
-src/app/state/route.js     Public state endpoint
-inference.py               Deterministic baseline runner
+backend/app/agent.py       Gemini-backed or fallback agent
+backend/app/main.py        FastAPI entrypoint
+inference.py               Deterministic inference runner
 openenv.yaml               OpenEnv configuration
 Dockerfile                 Single-container deployment
 ```
-

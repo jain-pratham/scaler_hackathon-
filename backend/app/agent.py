@@ -1,16 +1,24 @@
 ﻿from __future__ import annotations
 
-import json
 import re
 import urllib.request
 from typing import Optional
 
-from .models import AgentDecision, ObservationModel
+from .models import (
+    AgentDecision,
+    GeminiContent,
+    GeminiGenerateRequest,
+    GeminiGenerateResponse,
+    GeminiGenerationConfig,
+    GeminiTextPart,
+    ObservationModel,
+    ReplyPayload,
+)
 
 
 GEMINI_MODEL = "gemini-1.5-flash"
 
-DELIVERY_HINTS = (
+DELIVERY_HINTS: tuple[str, ...] = (
     "delivery",
     "delivered",
     "shipment",
@@ -21,7 +29,7 @@ DELIVERY_HINTS = (
     "carrier",
     "box",
 )
-ACCOUNT_HINTS = (
+ACCOUNT_HINTS: tuple[str, ...] = (
     "password",
     "account",
     "login",
@@ -31,13 +39,13 @@ ACCOUNT_HINTS = (
     "fraud",
     "shipping address",
 )
-RETURN_HINTS = (
+RETURN_HINTS: tuple[str, ...] = (
     "return",
     "wrong size",
     "pickup",
     "hardware",
 )
-REFUND_HINTS = (
+REFUND_HINTS: tuple[str, ...] = (
     "refund",
     "rebilled",
     "rebill",
@@ -46,7 +54,7 @@ REFUND_HINTS = (
     "billing",
     "defective",
 )
-TECHNICAL_HINTS = (
+TECHNICAL_HINTS: tuple[str, ...] = (
     "sync",
     "activation",
     "license",
@@ -105,99 +113,90 @@ class GeminiDecisionAgent:
         )
 
     def _call_gemini(self, prompt: str) -> AgentDecision:
-        url = (
-            "https://generativelanguage.googleapis.com/v1beta/models/"
-            f"{GEMINI_MODEL}:generateContent?key={self.api_key}"
-        )
-        payload = {
-            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-            "generationConfig": {
-                "temperature": 0.2,
-                "responseMimeType": "application/json",
-            },
-        }
+        request_payload = self._build_request_payload(prompt)
         request = urllib.request.Request(
-            url,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
+            self._gemini_url(),
+            data=request_payload.model_dump_json(by_alias=True).encode("utf-8"),
             method="POST",
         )
-        with urllib.request.urlopen(request, timeout=20) as response:
-            body = json.loads(response.read().decode("utf-8"))
+        request.add_header("Content-Type", "application/json")
 
-        text = (
-            body.get("candidates", [{}])[0]
-            .get("content", {})
-            .get("parts", [{}])[0]
-            .get("text", "")
-        )
+        with urllib.request.urlopen(request, timeout=20) as response:
+            payload = GeminiGenerateResponse.model_validate_json(response.read().decode("utf-8"))
+
+        text = self._extract_candidate_text(payload)
         return self._parse_json_payload(text)
 
     def _call_gemini_reply(self, prompt: str) -> str:
-        url = (
+        request_payload = self._build_request_payload(prompt)
+        request = urllib.request.Request(
+            self._gemini_url(),
+            data=request_payload.model_dump_json(by_alias=True).encode("utf-8"),
+            method="POST",
+        )
+        request.add_header("Content-Type", "application/json")
+
+        with urllib.request.urlopen(request, timeout=20) as response:
+            payload = GeminiGenerateResponse.model_validate_json(response.read().decode("utf-8"))
+
+        text = self._extract_candidate_text(payload)
+        return self._parse_reply_payload(text)
+
+    def _build_request_payload(self, prompt: str) -> GeminiGenerateRequest:
+        return GeminiGenerateRequest(
+            contents=[GeminiContent(role="user", parts=[GeminiTextPart(text=prompt)])],
+            generationConfig=GeminiGenerationConfig(
+                temperature=0.2,
+                responseMimeType="application/json",
+            ),
+        )
+
+    def _gemini_url(self) -> str:
+        return (
             "https://generativelanguage.googleapis.com/v1beta/models/"
             f"{GEMINI_MODEL}:generateContent?key={self.api_key}"
         )
-        payload = {
-            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-            "generationConfig": {
-                "temperature": 0.2,
-                "responseMimeType": "application/json",
-            },
-        }
-        request = urllib.request.Request(
-            url,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        with urllib.request.urlopen(request, timeout=20) as response:
-            body = json.loads(response.read().decode("utf-8"))
 
-        text = (
-            body.get("candidates", [{}])[0]
-            .get("content", {})
-            .get("parts", [{}])[0]
-            .get("text", "")
-        )
-        return self._parse_reply_payload(text)
+    def _extract_candidate_text(self, payload: GeminiGenerateResponse) -> str:
+        if not payload.candidates:
+            raise ValueError("Gemini returned no candidates")
 
-    def _parse_json_payload(self, text: str) -> AgentDecision:
+        parts = payload.candidates[0].content.parts
+        if not parts:
+            raise ValueError("Gemini returned no response parts")
+
+        text = parts[0].text.strip()
         if not text:
             raise ValueError("Gemini returned an empty response")
+        return text
 
-        try:
-            parsed = json.loads(text)
-        except json.JSONDecodeError:
-            match = re.search(r"\{.*\}", text, re.DOTALL)
-            if not match:
-                raise
-            parsed = json.loads(match.group(0))
-
-        return AgentDecision.model_validate(parsed)
+    def _parse_json_payload(self, text: str) -> AgentDecision:
+        payload_text = self._extract_json_object(text)
+        return AgentDecision.model_validate_json(payload_text)
 
     def _parse_reply_payload(self, text: str) -> str:
-        if not text:
-            raise ValueError("Gemini returned an empty reply")
-
-        try:
-            parsed = json.loads(text)
-        except json.JSONDecodeError:
-            match = re.search(r"\{.*\}", text, re.DOTALL)
-            if not match:
-                raise
-            parsed = json.loads(match.group(0))
-
-        message = str(parsed.get("message", "")).strip()
+        payload_text = self._extract_json_object(text)
+        payload = ReplyPayload.model_validate_json(payload_text)
+        message = payload.message.strip()
         if not message:
             raise ValueError("Gemini reply payload did not include a message")
         return message
 
+    def _extract_json_object(self, text: str) -> str:
+        stripped_text = text.strip()
+        if stripped_text.startswith("{") and stripped_text.endswith("}"):
+            return stripped_text
+
+        match = re.search(r"\{.*\}", text, re.DOTALL)
+        if not match:
+            raise ValueError("Response did not contain a JSON object")
+        return match.group(0)
+
     def _fallback_decision(self, state: ObservationModel) -> AgentDecision:
-        if state.progress.classification in {"pending", "incorrect"}:
+        if state.progress.classification in ("pending", "incorrect"):
             return AgentDecision(action="classify_ticket", category=self._infer_category(state))
 
-        if state.progress.reply in {"pending", "incorrect"}:
+        if state.progress.reply in ("pending", "incorrect"):
             return AgentDecision(action="respond", message=self._fallback_reply(state))
 
         if state.progress.escalation == "required":

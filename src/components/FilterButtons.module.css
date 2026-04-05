@@ -16,24 +16,22 @@
 }
 
 .buttonGroup {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
+  display: flex;
+  gap: 10px;
 }
 
 .filterButton {
-  padding: 8px 8px;
-  border: 2px solid transparent;
-  border-radius: 7px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-transform: uppercase;
-  letter-spacing: 0.2px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
+  flex: 1; /* sab buttons equal width */
+  padding: 8px 0;
+  font-size: 14px;
 
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+
+  text-align: center;
+  white-space: nowrap; /* text break nahi hoga */
+}
 .filterButton:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);

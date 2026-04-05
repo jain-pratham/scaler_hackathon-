@@ -6,8 +6,11 @@ from .agent import GeminiDecisionAgent
 from .grader import SupportTicketGrader
 from .models import (
     Action,
+    ActionType,
     AutoAgentResponse,
     AutoAgentTrajectoryStep,
+    CategoryCatalog,
+    CategoryOption,
     ConversationEntry,
     DifficultyLevel,
     DraftReplyResponse,
@@ -26,15 +29,17 @@ from .simulator import CustomerSimulator
 from .tasks import TaskRepository
 
 
-SUPPORTED_ACTIONS = ["classify_ticket", "respond", "escalate", "close_ticket"]
-CATEGORY_LABELS = {
-    "refund": "Refund Request",
-    "return": "Return Request",
-    "delivery": "Delivery Problem",
-    "account": "Account Issue",
-    "technical": "Technical Support",
-    "other": "Other",
-}
+SUPPORTED_ACTIONS: list[ActionType] = ["classify_ticket", "respond", "escalate", "close_ticket"]
+CATEGORY_CATALOG = CategoryCatalog(
+    options=[
+        CategoryOption(key="refund", label="Refund Request"),
+        CategoryOption(key="return", label="Return Request"),
+        CategoryOption(key="delivery", label="Delivery Problem"),
+        CategoryOption(key="account", label="Account Issue"),
+        CategoryOption(key="technical", label="Technical Support"),
+        CategoryOption(key="other", label="Other"),
+    ]
+)
 
 
 def clamp_score(value: float) -> float:
@@ -81,8 +86,8 @@ class CustomerSupportEnv:
                 status="idle",
                 done=False,
                 reward_score=0.0,
-                available_categories=list(CATEGORY_LABELS.keys()),
-                available_actions=SUPPORTED_ACTIONS,
+                available_categories=CATEGORY_CATALOG.keys(),
+                available_actions=list(SUPPORTED_ACTIONS),
             )
         return self._public_state(session.state)
 
@@ -122,7 +127,7 @@ class CustomerSupportEnv:
             reward, is_correct = self.grader.evaluate_classification(task, action.category)
             normalized_category = (action.category or "").strip().lower() or "other"
             if state.ticket is not None:
-                state.ticket.category = CATEGORY_LABELS.get(normalized_category, normalized_category.title())
+                state.ticket.category = CATEGORY_CATALOG.label_for(normalized_category)
             state.progress.classification = "correct" if is_correct else "incorrect"
             state.episode_metrics.classification_correct = is_correct
             feedback.append(
@@ -236,7 +241,7 @@ class CustomerSupportEnv:
                 break
 
             decision = self.agent.decide(self._public_state(session.state))
-            result = self.step(session_id, Action.model_validate(decision.model_dump()))
+            result = self.step(session_id, Action.model_validate_json(decision.model_dump_json()))
             trajectory.append(
                 AutoAgentTrajectoryStep(decision=decision, reward=result.reward, done=result.done)
             )
@@ -287,8 +292,8 @@ class CustomerSupportEnv:
             reward_score=0.0,
             cumulative_reward=0.0,
             customer_ready_to_close=False,
-            available_categories=list(CATEGORY_LABELS.keys()),
-            available_actions=SUPPORTED_ACTIONS,
+            available_categories=CATEGORY_CATALOG.keys(),
+            available_actions=list(SUPPORTED_ACTIONS),
             progress=Progress(classification="pending", reply="pending", escalation=escalation_status),
             policy_rules=task.policy_rules,
             reply_guidance=task.reply_guidance.model_copy(deep=True),
@@ -301,4 +306,4 @@ class CustomerSupportEnv:
         )
 
     def _public_state(self, state: State) -> Observation:
-        return Observation.model_validate(state.model_dump())
+        return Observation.model_validate_json(state.model_dump_json())

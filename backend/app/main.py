@@ -1,5 +1,4 @@
 ﻿from __future__ import annotations
-import traceback
 
 import os
 from pathlib import Path
@@ -67,29 +66,29 @@ def reset(
     payload: Optional[ResetRequest] = None,
     x_session_id: Optional[str] = Header(default=None),
 ) -> ResetResponse:
-    try:
-        session_id = resolve_session_id(x_session_id)
+    session_id = resolve_session_id(x_session_id)
 
-        # ✅ Default values if no body provided (IMPORTANT)
+    try:
         difficulty = payload.difficulty if payload else "easy"
         ticket_id = payload.ticket_id if payload else None
-
         state = environment.reset(
             session_id=session_id,
             difficulty=difficulty,
             ticket_id=ticket_id,
         )
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    except HTTPException:
+        raise
+    except Exception as error:
+        raise HTTPException(status_code=500, detail="Failed to reset environment.") from error
 
-        if state.ticket is None:
-            raise HTTPException(status_code=500, detail="Reset did not produce a ticket state.")
+    if state.ticket is None:
+        raise HTTPException(status_code=500, detail="Reset did not produce a ticket state.")
 
-        return ResetResponse(ticket=state.ticket, state=state)
-
-    except Exception as e:
-        return ResetResponse(
-            ticket=None,
-            state=None,
-        )
+    return ResetResponse(ticket=state.ticket, state=state)
 
 
 @app.post("/step", response_model=StepResponse)

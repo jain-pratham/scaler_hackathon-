@@ -19,6 +19,24 @@ class ReplyGuidance(BaseModel):
     negative_keywords: list[str] = Field(default_factory=list)
 
 
+class CategoryOption(BaseModel):
+    key: str
+    label: str
+
+
+class CategoryCatalog(BaseModel):
+    options: list[CategoryOption] = Field(default_factory=list)
+
+    def keys(self) -> list[str]:
+        return [option.key for option in self.options]
+
+    def label_for(self, key: str) -> str:
+        for option in self.options:
+            if option.key == key:
+                return option.label
+        return key.title()
+
+
 class ResolutionRules(BaseModel):
     needs_escalation: bool = False
     can_close_after_response: bool = True
@@ -181,6 +199,45 @@ class AgentDecision(BaseModel):
     category: str = ""
 
 
+class GeminiTextPart(BaseModel):
+    text: str
+
+
+class GeminiContent(BaseModel):
+    role: str
+    parts: list[GeminiTextPart] = Field(default_factory=list)
+
+
+class GeminiGenerationConfig(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    temperature: float
+    response_mime_type: str = Field(alias="responseMimeType")
+
+
+class GeminiGenerateRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    contents: list[GeminiContent] = Field(default_factory=list)
+    generation_config: GeminiGenerationConfig = Field(alias="generationConfig")
+
+
+class GeminiCandidateContent(BaseModel):
+    parts: list[GeminiTextPart] = Field(default_factory=list)
+
+
+class GeminiCandidate(BaseModel):
+    content: GeminiCandidateContent = Field(default_factory=GeminiCandidateContent)
+
+
+class GeminiGenerateResponse(BaseModel):
+    candidates: list[GeminiCandidate] = Field(default_factory=list)
+
+
+class ReplyPayload(BaseModel):
+    message: str = ""
+
+
 class AutoAgentTrajectoryStep(BaseModel):
     decision: AgentDecision
     reward: float
@@ -252,6 +309,17 @@ class InferenceResults(BaseModel):
     seed: int
     average_score: float
     episodes: list[InferenceEpisode] = Field(default_factory=list)
+
+
+class InferenceEnvironmentConfig(BaseModel):
+    api_base_url: str = ""
+    model_name: str = ""
+    hf_token: str = ""
+
+
+class InferenceStepLog(BaseModel):
+    step: int
+    action: str
 
 
 ActionModel = Action
