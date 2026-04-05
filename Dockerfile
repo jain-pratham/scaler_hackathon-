@@ -1,37 +1,31 @@
-﻿# ---------- STEP 1: BUILD NEXT.JS ----------
-FROM node:18 AS frontend
+﻿# ---------- STEP 1: BUILD FRONTEND ----------
+FROM node:22 AS frontend
 
-WORKDIR /app/frontend
+WORKDIR /app
 
-COPY frontend/package*.json ./
+COPY package*.json ./
 RUN npm install
 
-COPY frontend ./
+COPY . .
 RUN npm run build
 
 
-# ---------- STEP 2: PYTHON BACKEND ----------
+# ---------- STEP 2: BACKEND ----------
 FROM python:3.10-slim
 
 WORKDIR /app
 
-# copy backend + all files
 COPY . .
 
-# install python deps
 RUN pip install --no-cache-dir -r requirements.txt
 
-# install node for running Next.js
+# install node (for next start)
 RUN apt-get update && apt-get install -y nodejs npm
 
-# copy built frontend from previous stage
-COPY --from=frontend /app/frontend .//frontend
+# copy frontend build
+COPY --from=frontend /app ./
 
-# go to frontend folder
-WORKDIR /app/frontend
-
-# expose HF required port
 EXPOSE 8000
 
-# run Next.js (UI)
-CMD ["npm", "start"]
+# RUN BOTH BACKEND + FRONTEND
+CMD bash -c "uvicorn backend.app.main:app --host 0.0.0.0 --port 8001 & npx next start -p 8000"

@@ -1,30 +1,92 @@
 ﻿---
-
-title: Customer Support OpenEnv
-emoji: 🤖
+title: OpenEnv Support Agent
+emoji: "🤖"
 colorFrom: blue
 colorTo: indigo
 sdk: docker
+tags:
+  - openenv
+app_port: 8000
 pinned: false
--------------
+---
 
-# Customer Support Ticket Resolution Environment
+# Customer Support OpenEnv Environment
 
-## Environment Description
+`openenv-support-agent` is a realistic multi-step environment designed for training and evaluating AI agents on customer support workflows.
 
-This project implements an OpenEnv-compatible customer support environment for realistic ecommerce and SaaS support tickets. An agent must classify the issue, send a policy-aware customer response, escalate when the workflow requires it, and close the ticket only when the case is resolved correctly.
+Instead of treating support as a single reply, this environment models the full lifecycle:
 
-The environment is served by a FastAPI application and exposes deterministic task loading, grading, simulation, and state transitions.
+1. classify the issue
+2. respond with policy-aware guidance
+3. escalate if required
+4. close the ticket correctly
 
-Difficulty tiers:
+---
 
-* `easy`
-* `medium`
-* `hard`
+## Problem Statement
+
+Most chatbot benchmarks are too simple:
+
+* they evaluate single responses instead of workflows
+* they ignore escalation logic
+* they don’t simulate real customer scenarios
+* they lack transparent reward systems
+
+This project solves that by turning support handling into a structured, multi-step environment.
+
+---
+
+## Why This Matters
+
+In real systems, good support handling prevents:
+
+* customer dissatisfaction
+* refund losses
+* escalation overload
+* policy violations
+
+This environment helps:
+
+* evaluate agent decision-making
+* train RL-based workflows
+* simulate real-world support systems
+* benchmark reasoning + action sequencing
+
+---
+
+## Environment Design
+
+```text
+Agent / Inference Script
+        |
+        v
+FastAPI Backend
+  - /reset
+  - /step
+  - /state
+  - /health
+        |
+        v
+CustomerSupportEnv
+  - reset()
+  - step()
+  - state()
+        |
+        v
+Grader System
+  - classification scoring
+  - response quality scoring
+  - escalation correctness
+  - closure validation
+        |
+        v
+Task Dataset
+  - easy / medium / hard tickets
+```
+
+---
 
 ## Action Space
-
-Schema:
 
 ```json
 {
@@ -34,128 +96,138 @@ Schema:
 }
 ```
 
-Rules:
-
-* `classify_ticket`
-
-  * Required field: `category`
-  * Allowed categories: `refund`, `return`, `delivery`, `account`, `technical`, `other`
-* `respond`
-
-  * Required field: `message`
-* `escalate`
-
-  * No extra fields required
-* `close_ticket`
-
-  * No extra fields required
+---
 
 ## Observation Space
 
-Schema:
+The environment returns structured state including:
 
-```json
-{
-  "difficulty": "easy | medium | hard | null",
-  "ticket": {
-    "id": "string",
-    "customer": "string",
-    "issue": "string",
-    "orderId": "string",
-    "product": "string",
-    "orderDateText": "string",
-    "category": "string",
-    "status": "string",
-    "difficulty": "easy | medium | hard"
-  },
-  "status": "string",
-  "done": "boolean",
-  "steps_taken": "integer",
-  "max_steps": "integer",
-  "max_possible_reward": "float",
-  "current_stage": "integer",
-  "last_reward": "float",
-  "reward_score": "float",
-  "cumulative_reward": "float",
-  "customer_ready_to_close": "boolean",
-  "available_categories": ["string"],
-  "available_actions": ["string"],
-  "progress": {
-    "classification": "pending | correct | incorrect",
-    "reply": "pending | completed | incorrect",
-    "escalation": "required | not_needed | completed | unnecessary"
-  },
-  "policy_rules": ["string"],
-  "reply_guidance": {
-    "positive_keywords": ["string"],
-    "negative_keywords": ["string"]
-  },
-  "conversation_history": [
-    {
-      "role": "system | customer | agent",
-      "message": "string"
-    }
-  ],
-  "episode_metrics": {
-    "actions_taken": ["string"],
-    "classification_correct": "boolean",
-    "reply_helpful": "boolean",
-    "escalation_correct": "boolean",
-    "closed_correctly": "boolean"
-  },
-  "info_messages": ["string"]
-}
-```
+* ticket details
+* progress tracking
+* conversation history
+* reward signals
+* policy guidance
 
-## Reward Function
+---
 
-All rewards are deterministic floats in the range `0.0` to `1.0`.
+## Reward System
 
-* Classification → `1.0 / 0.0`
-* Response → `0.0 to 1.0`
-* Escalation → `1.0 / 0.6 / 0.0`
-* Closure → `1.0 / 0.8 / 0.0`
+Each episode returns a score between `0.0 → 1.0`.
 
-## Setup Instructions
+Breakdown:
 
-```bash
-API_BASE_URL=
-MODEL_NAME=
-HF_TOKEN=
-PYTHON_BACKEND_URL=http://127.0.0.1:8000
-GEMINI_API_KEY=
-OPENENV_RANDOM_SEED=7
-```
+* Classification → correctness
+* Response → quality + relevance
+* Escalation → correct decision
+* Closure → correct timing
 
-Install:
+Supports:
 
-```bash
-python -m pip install -r requirements.txt
-```
+* partial rewards
+* deterministic grading
+* explainable scoring
 
-## Running Locally
+---
 
-```bash
-python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
-```
+## Tasks
 
-## Running Inference
+The environment includes 3 difficulty levels:
+
+* **Easy** → straightforward classification + response
+* **Medium** → reasoning + response quality
+* **Hard** → escalation + multi-step correctness
+
+Each task simulates real customer issues.
+
+---
+
+## Inference
+
+Run full evaluation:
 
 ```bash
 python inference.py
 ```
 
-## API Endpoints
+Output:
 
-* `/`
-* `/health`
-* `/reset`
-* `/step`
-* `/state`
+* structured logs `[START] → [STEP] → [END]`
+* reward scores
+* inference_results.json
+
+---
+
+## Local Run
+
+Start backend:
+
+```bash
+python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
+```
+
+Test:
+
+```
+http://localhost:8000/reset
+```
+
+---
 
 ## Docker
 
+Build:
+
 ```bash
-docker build -t openenv-customer-support .
-docker run -p 8000:8000 openenv-customer-support
+docker build -t openenv-support-agent .
 ```
+
+Run:
+
+```bash
+docker run -p 8000:8000 openenv-support-agent
+```
+
+---
+
+## Hugging Face Spaces Deployment
+
+1. Create Space → Docker
+2. Upload project files
+3. Add environment variables:
+
+```
+API_BASE_URL=
+MODEL_NAME=
+HF_TOKEN=
+GEMINI_API_KEY=
+```
+
+4. Deploy
+
+---
+
+## API Endpoints
+
+* `GET /` → health check
+* `GET /reset` → start new episode
+* `POST /step` → take action
+* `GET /state` → current state
+
+---
+
+## Project Structure
+
+```text
+backend/
+tasks/
+openenv.yaml
+inference.py
+Dockerfile
+README.md
+```
+
+---
+
+## License
+
+MIT
