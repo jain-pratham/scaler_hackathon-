@@ -1,4 +1,4 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
 import { proxyToBackend } from '@/lib/backendProxy';
 
@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request) {
   try {
     const sessionId = request.headers.get('x-session-id');
-    const body = await request.json();
+    const body = await request.json().catch(() => ({}));
 
     const payload = await proxyToBackend({
       path: '/step',
