@@ -17,7 +17,7 @@ CLOSE_CONFIRMATION_PHRASES = (
 
 
 def clamp_score(value: float) -> float:
-    return max(0.0001, min(0.9999, round(value, 4)))
+    return max(0.01, min(0.99, round(value, 4)))
 
 
 def _normalize_text(value: Optional[str]) -> str:
@@ -57,8 +57,8 @@ class SupportTicketGrader:
         matched_negative = [keyword for keyword in negative_keywords if keyword in normalized_message]
         feedback: list[str] = []
 
-        keyword_score = len(positive_matches) / len(positive_keywords) if positive_keywords else 1.0
-        length_score = 1.0 if len(normalized_message) >= 30 else min(1.0, len(normalized_message) / 30.0)
+        keyword_score = clamp_score(len(positive_matches) / len(positive_keywords)) if positive_keywords else clamp_score(1.0)
+        length_score = clamp_score(1.0) if len(normalized_message) >= 30 else clamp_score(len(normalized_message) / 30.0)
         score = (keyword_score * 0.8) + (length_score * 0.2)
 
         if matched_negative:

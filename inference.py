@@ -127,7 +127,7 @@ def can_use_remote_model(config: InferenceEnvironmentConfig) -> bool:
 
 
 def clamp_score(value: float) -> float:
-    return max(0.0001, min(0.9999, round(value, 4)))
+    return max(0.01, min(0.99, round(value, 4)))
 
 
 def format_reward(value: float) -> str:
@@ -354,13 +354,13 @@ async def run_episode(
     history: list[str] = []
     rewards: list[float] = []
     steps_taken = 0
-    score = 0.0
+    score = clamp_score(0.0)
     success = False
     session_id = f"inference-{difficulty}-{ticket_id}"
     observation = env.reset(session_id=session_id, difficulty=difficulty, ticket_id=ticket_id)
     max_total_reward = max(observation.max_possible_reward, 1.0)
     last_context_message = get_last_context_message(observation)
-    last_reward = 0.0
+    last_reward = clamp_score(0.0)
     model_label = config.model_name or "heuristic-fallback"
 
     log_start(task=f"{TASK_NAME}:{ticket_id}", env=BENCHMARK, model=model_label)

@@ -43,7 +43,7 @@ CATEGORY_CATALOG = CategoryCatalog(
 
 
 def clamp_score(value: float) -> float:
-    return max(0.0001, min(0.9999, round(value, 4)))
+    return max(0.01, min(0.99, round(value, 4)))
 
 
 class CustomerSupportEnv:
@@ -85,7 +85,7 @@ class CustomerSupportEnv:
             return Observation(
                 status="idle",
                 done=False,
-                reward_score=0.0,
+                reward_score=clamp_score(0.0),
                 available_categories=CATEGORY_CATALOG.keys(),
                 available_actions=list(SUPPORTED_ACTIONS),
             )
@@ -101,7 +101,7 @@ class CustomerSupportEnv:
             observation = self._public_state(state)
             return StepResponse(
                 observation=observation,
-                reward=0.0,
+                reward=clamp_score(0.0),
                 done=True,
                 info=StepInfo(messages=["Episode already completed."], state=observation),
             )
@@ -113,12 +113,12 @@ class CustomerSupportEnv:
             observation = self._public_state(state)
             return StepResponse(
                 observation=observation,
-                reward=0.0,
+                reward=clamp_score(0.0),
                 done=True,
                 info=StepInfo(messages=["Maximum step count reached."], state=observation),
             )
 
-        reward = 0.0
+        reward = clamp_score(0.0)
         state.steps_taken += 1
         state.episode_metrics.actions_taken.append(action.action)
 
@@ -283,9 +283,9 @@ class CustomerSupportEnv:
             max_steps=task.max_steps,
             max_possible_reward=float(len(task.expected_flow)),
             current_stage=0,
-            last_reward=0.0,
-            reward_score=0.0,
-            cumulative_reward=0.0,
+            last_reward=clamp_score(0.0),
+            reward_score=clamp_score(0.0),
+            cumulative_reward=clamp_score(0.0),
             customer_ready_to_close=False,
             available_categories=CATEGORY_CATALOG.keys(),
             available_actions=list(SUPPORTED_ACTIONS),
