@@ -108,19 +108,24 @@ def load_environment_config() -> InferenceEnvironmentConfig:
     return InferenceEnvironmentConfig(
         api_base_url=os.getenv("API_BASE_URL", "").strip(),
         model_name=os.getenv("MODEL_NAME", "").strip(),
+        api_key=os.getenv("API_KEY", "").strip(),
         hf_token=os.getenv("HF_TOKEN", "").strip(),
     )
 
 
 def build_client(config: InferenceEnvironmentConfig) -> OpenAI:
+    # Prioritize API_KEY over HF_TOKEN as per evaluation requirements
+    api_key = config.api_key or config.hf_token or "dummy-token"
+    base_url = config.api_base_url or "https://router.huggingface.co/v1"
+    
     return OpenAI(
-        base_url=config.api_base_url or "https://router.huggingface.co/v1",
-        api_key=config.hf_token or "dummy-token",
+        base_url=base_url,
+        api_key=api_key,
     )
 
 
 def can_use_remote_model(config: InferenceEnvironmentConfig) -> bool:
-    return bool(config.api_base_url and config.model_name and config.hf_token)
+    return bool(config.api_base_url and config.model_name and (config.api_key or config.hf_token))
 
 
 def clamp_score(value: float) -> float:

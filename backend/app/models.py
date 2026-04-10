@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import random
 from typing import Literal, Optional
@@ -328,6 +328,7 @@ class InferenceResults(BaseModel):
 class InferenceEnvironmentConfig(BaseModel):
     api_base_url: str = ""
     model_name: str = ""
+    api_key: str = ""
     hf_token: str = ""
 
 
