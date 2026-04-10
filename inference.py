@@ -104,23 +104,21 @@ def load_local_env_files() -> None:
 
 
 def load_environment_config() -> InferenceEnvironmentConfig:
-    load_local_env_files()
     return InferenceEnvironmentConfig(
         api_base_url=os.getenv("API_BASE_URL", "").strip(),
-        model_name=os.getenv("MODEL_NAME", "").strip(),
+        model_name=os.getenv("MODEL_NAME", "gemini-1.5-flash").strip(),
         api_key=os.getenv("API_KEY", "").strip(),
         hf_token=os.getenv("HF_TOKEN", "").strip(),
     )
 
 
 def build_client(config: InferenceEnvironmentConfig) -> OpenAI:
-    # Prioritize API_KEY over HF_TOKEN as per evaluation requirements
-    api_key = config.api_key or config.hf_token or "dummy-token"
-    base_url = config.api_base_url or "https://router.huggingface.co/v1"
-    
+    if not config.api_base_url or not config.api_key:
+        raise ValueError("Missing API_BASE_URL or API_KEY in environment.")
+
     return OpenAI(
-        base_url=base_url,
-        api_key=api_key,
+        base_url=config.api_base_url,
+        api_key=config.api_key,
     )
 
 
@@ -296,7 +294,7 @@ def get_model_action(
     observation: Observation,
 ) -> tuple[Action, str | None]:
     if not can_use_remote_model(config):
-        return build_fallback_action(observation), "remote_model_not_configured"
+        raise RuntimeError("Remote model is not properly configured. Check API_BASE_URL, API_KEY, and MODEL_NAME.")
 
     prompt = build_model_prompt(
         step=step,

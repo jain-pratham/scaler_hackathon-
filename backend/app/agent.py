@@ -1,16 +1,14 @@
 from __future__ import annotations
 
+import json
+import os
 import re
-import urllib.request
 from typing import Optional
+
+from openai import OpenAI
 
 from .models import (
     AgentDecision,
-    GeminiContent,
-    GeminiGenerateRequest,
-    GeminiGenerateResponse,
-    GeminiGenerationConfig,
-    GeminiTextPart,
     ObservationModel,
     ReplyPayload,
 )
@@ -66,26 +64,33 @@ TECHNICAL_HINTS: tuple[str, ...] = (
 
 
 class GeminiDecisionAgent:
-    def __init__(self, api_key: Optional[str]) -> None:
-        self.api_key = api_key
+    def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None, model: Optional[str] = None) -> None:
+        self.api_key = api_key or os.getenv("API_KEY")
+        self.base_url = base_url or os.getenv("API_BASE_URL")
+        self.model = model or os.getenv("MODEL_NAME", "gemini-1.5-flash")
+        
+        if self.api_key and self.base_url:
+            self.client = OpenAI(api_key=self.api_key, base_url=self.base_url)
+        else:
+            self.client = None
 
     def decide(self, state: ObservationModel) -> AgentDecision:
-        if not self.api_key:
+        if not self.client:
             return self._fallback_decision(state)
 
         prompt = self._build_prompt(state)
         try:
-            return self._call_gemini(prompt)
+            return self._call_llm(prompt)
         except Exception:
             return self._fallback_decision(state)
 
     def generate_reply(self, state: ObservationModel) -> str:
-        if not self.api_key:
+        if not self.client:
             return self._fallback_reply(state)
 
         prompt = self._build_reply_prompt(state)
         try:
-            return self._call_gemini_reply(prompt)
+            return self._call_llm_reply(prompt)
         except Exception:
             return self._fallback_reply(state)
 
@@ -112,63 +117,31 @@ class GeminiDecisionAgent:
             f"STATE:\n{state.model_dump_json()}"
         )
 
-    def _call_gemini(self, prompt: str) -> AgentDecision:
-        request_payload = self._build_request_payload(prompt)
-        request = urllib.request.Request(
-            self._gemini_url(),
-            data=request_payload.model_dump_json(by_alias=True).encode("utf-8"),
-            method="POST",
+    def _call_llm(self, prompt: str) -> AgentDecision:
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": "You are a precise OpenEnv policy agent. Output JSON only."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0,
+            response_format={"type": "json_object"}
         )
-        request.add_header("Content-Type", "application/json")
-
-        with urllib.request.urlopen(request, timeout=120) as response:
-            payload = GeminiGenerateResponse.model_validate_json(response.read().decode("utf-8"))
-
-        text = self._extract_candidate_text(payload)
+        text = response.choices[0].message.content
         return self._parse_json_payload(text)
 
-    def _call_gemini_reply(self, prompt: str) -> str:
-        request_payload = self._build_request_payload(prompt)
-        request = urllib.request.Request(
-            self._gemini_url(),
-            data=request_payload.model_dump_json(by_alias=True).encode("utf-8"),
-            method="POST",
+    def _call_llm_reply(self, prompt: str) -> str:
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": "You are a helpful support agent. Output JSON only."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.2,
+            response_format={"type": "json_object"}
         )
-        request.add_header("Content-Type", "application/json")
-
-        with urllib.request.urlopen(request, timeout=120) as response:
-            payload = GeminiGenerateResponse.model_validate_json(response.read().decode("utf-8"))
-
-        text = self._extract_candidate_text(payload)
+        text = response.choices[0].message.content
         return self._parse_reply_payload(text)
-
-    def _build_request_payload(self, prompt: str) -> GeminiGenerateRequest:
-        return GeminiGenerateRequest(
-            contents=[GeminiContent(role="user", parts=[GeminiTextPart(text=prompt)])],
-            generationConfig=GeminiGenerationConfig(
-                temperature=0.2,
-                responseMimeType="application/json",
-            ),
-        )
-
-    def _gemini_url(self) -> str:
-        return (
-            "https://generativelanguage.googleapis.com/v1beta/models/"
-            f"{GEMINI_MODEL}:generateContent?key={self.api_key}"
-        )
-
-    def _extract_candidate_text(self, payload: GeminiGenerateResponse) -> str:
-        if not payload.candidates:
-            raise ValueError("Gemini returned no candidates")
-
-        parts = payload.candidates[0].content.parts
-        if not parts:
-            raise ValueError("Gemini returned no response parts")
-
-        text = parts[0].text.strip()
-        if not text:
-            raise ValueError("Gemini returned an empty response")
-        return text
 
     def _parse_json_payload(self, text: str) -> AgentDecision:
         payload_text = self._extract_json_object(text)
