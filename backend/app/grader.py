@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from typing import Optional
 
@@ -17,7 +17,7 @@ CLOSE_CONFIRMATION_PHRASES = (
 
 
 def clamp_score(value: float) -> float:
-    return max(0.0, min(1.0, round(value, 4)))
+    return max(0.0001, min(0.9999, round(value, 4)))
 
 
 def _normalize_text(value: Optional[str]) -> str:
@@ -39,7 +39,7 @@ class SupportTicketGrader:
     def evaluate_classification(self, task: Task, category: Optional[str]) -> tuple[float, bool]:
         normalized_category = _normalize_text(category)
         is_correct = normalized_category == _normalize_text(task.expected_category)
-        return (1.0 if is_correct else 0.0, is_correct)
+        return (clamp_score(1.0) if is_correct else clamp_score(0.0), is_correct)
 
     def evaluate_response(
         self,
@@ -49,7 +49,7 @@ class SupportTicketGrader:
     ) -> tuple[float, bool, list[str]]:
         normalized_message = _normalize_text(message)
         if _is_close_confirmation_message(state, normalized_message):
-            return 1.0, True, ["Closure confirmation was shared with the customer."]
+            return clamp_score(1.0), True, ["Closure confirmation was shared with the customer."]
 
         positive_keywords = [keyword.lower() for keyword in task.reply_guidance.positive_keywords if keyword.strip()]
         negative_keywords = [keyword.lower() for keyword in task.reply_guidance.negative_keywords if keyword.strip()]
@@ -85,10 +85,10 @@ class SupportTicketGrader:
         response_sent = state.progress.reply in {"completed", "incorrect"}
 
         if needs_escalation and response_sent:
-            return 1.0, True, "Escalation was appropriate for this ticket."
+            return clamp_score(1.0), True, "Escalation was appropriate for this ticket."
         if needs_escalation:
-            return 0.6, True, "Escalation was needed, but the customer should have been informed first."
-        return 0.0, False, "Escalation was not required for this ticket."
+            return clamp_score(0.6), True, "Escalation was needed, but the customer should have been informed first."
+        return clamp_score(0.0), False, "Escalation was not required for this ticket."
 
     def evaluate_closure(self, task: Task, state: State) -> tuple[float, bool, list[str]]:
         reasons: list[str] = []
@@ -111,7 +111,7 @@ class SupportTicketGrader:
             reasons.append("The customer has not confirmed resolution yet.")
 
         if not ready_to_close:
-            return 0.0, False, reasons
+            return clamp_score(0.0), False, reasons
 
         score = 1.0 if state.steps_taken <= len(task.expected_flow) else 0.8
         return clamp_score(score), True, ["Ticket was closed at the right time."]

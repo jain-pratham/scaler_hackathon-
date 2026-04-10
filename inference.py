@@ -107,7 +107,7 @@ def load_environment_config() -> InferenceEnvironmentConfig:
     return InferenceEnvironmentConfig(
         api_base_url=os.getenv("API_BASE_URL", "").strip(),
         model_name=os.getenv("MODEL_NAME", "gemini-1.5-flash").strip(),
-        api_key=os.getenv("API_KEY", "").strip(),
+        api_key=os.getenv("API_KEY") or os.getenv("GEMINI_API_KEY") or "",
         hf_token=os.getenv("HF_TOKEN", "").strip(),
     )
 
@@ -127,7 +127,7 @@ def can_use_remote_model(config: InferenceEnvironmentConfig) -> bool:
 
 
 def clamp_score(value: float) -> float:
-    return max(0.0, min(1.0, round(value, 4)))
+    return max(0.0001, min(0.9999, round(value, 4)))
 
 
 def format_reward(value: float) -> str:
@@ -413,6 +413,7 @@ async def run_episode(
 
 
 async def main() -> None:
+    load_local_env_files()
     config = load_environment_config()
     client = build_client(config)
     repository = TaskRepository(TASKS_DIR)
